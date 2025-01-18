@@ -103,11 +103,14 @@
         .toggle-description:hover {
             background-color: #005f8b;
         }
-        .edit-mode input {
+        .edit-mode input, .edit-mode textarea {
             width: 100%;
             padding: 0.5rem;
             margin-top: 0.5rem;
             font-size: 1rem;
+        }
+        .edit-mode .add-button {
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -196,7 +199,7 @@
                 taskName.textContent = taskNameInput.value;
                 personAssigned.textContent = 'Assigned to: ' + personInput.value;
                 description.querySelector('p').textContent = descriptionInput.value;
-                cancelEdit(cardElement);
+                saveTask(cardElement);
             };
 
             const cancelButton = document.createElement('button');
@@ -208,6 +211,40 @@
 
             cardElement.appendChild(saveButton);
             cardElement.appendChild(cancelButton);
+        }
+
+        // Save Task (go back to normal mode)
+        function saveTask(cardElement) {
+            const taskName = cardElement.querySelector('input[type="text"]');
+            const personAssigned = cardElement.querySelector('input[type="text"]');
+            const description = cardElement.querySelector('textarea');
+
+            // Clear edit fields
+            if (taskName) taskName.remove();
+            if (personAssigned) personAssigned.remove();
+            if (description) description.remove();
+
+            // Restore task content
+            const taskNameSpan = document.createElement('span');
+            taskNameSpan.textContent = taskName.value;
+            cardElement.appendChild(taskNameSpan);
+
+            const personAssignedSpan = document.createElement('span');
+            personAssignedSpan.textContent = 'Assigned to: ' + personAssigned.value;
+            personAssignedSpan.classList.add('person');
+            cardElement.appendChild(personAssignedSpan);
+
+            const descriptionDiv = document.createElement('div');
+            descriptionDiv.classList.add('description');
+            descriptionDiv.classList.add('minimized');
+            descriptionDiv.innerHTML = `<p>${description.value}</p>`;
+            cardElement.appendChild(descriptionDiv);
+
+            // Remove the save/cancel buttons
+            const buttons = cardElement.querySelectorAll('.add-button');
+            buttons.forEach(button => button.remove());
+
+            cardElement.classList.remove('edit-mode');
         }
 
         // Cancel edit mode
@@ -237,6 +274,10 @@
             descriptionDiv.classList.add('minimized');
             descriptionDiv.innerHTML = `<p>${description.value}</p>`;
             cardElement.appendChild(descriptionDiv);
+
+            // Remove the save/cancel buttons
+            const buttons = cardElement.querySelectorAll('.add-button');
+            buttons.forEach(button => button.remove());
         }
 
         // Delete Task
