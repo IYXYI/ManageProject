@@ -42,6 +42,9 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             cursor: pointer;
         }
+        .card.dragging {
+            opacity: 0.5;
+        }
         .add-button {
             background-color: #0079bf;
             color: white;
@@ -64,35 +67,40 @@
     <div class="board">
         <div class="column" id="todo">
             <h2>To Do</h2>
-            <div class="card" onclick="editTask(this)">Task 1</div>
-            <div class="card" onclick="editTask(this)">Task 2</div>
-            <div class="card" onclick="editTask(this)">Task 3</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 1</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 2</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 3</div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
         <div class="column" id="doing">
             <h2>Doing</h2>
-            <div class="card" onclick="editTask(this)">Task 4</div>
-            <div class="card" onclick="editTask(this)">Task 5</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 4</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 5</div>
             <button class="add-button" onclick="addTask('doing')">+ Add Task</button>
         </div>
         <div class="column" id="done">
             <h2>Done</h2>
-            <div class="card" onclick="editTask(this)">Task 6</div>
-            <div class="card" onclick="editTask(this)">Task 7</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 6</div>
+            <div class="card" draggable="true" onclick="editTask(this)">Task 7</div>
             <button class="add-button" onclick="addTask('done')">+ Add Task</button>
         </div>
     </div>
 
     <script>
+        // Allow adding new tasks
         function addTask(columnId) {
             const column = document.getElementById(columnId);
             const newTask = document.createElement('div');
             newTask.className = 'card';
+            newTask.draggable = true;
             newTask.textContent = 'New Task';
             newTask.setAttribute('onclick', 'editTask(this)');
+            newTask.addEventListener('dragstart', handleDragStart);
+            newTask.addEventListener('dragend', handleDragEnd);
             column.insertBefore(newTask, column.querySelector('.add-button'));
         }
 
+        // Allow editing tasks
         function editTask(taskElement) {
             const currentText = taskElement.textContent;
             const input = document.createElement('input');
@@ -104,6 +112,7 @@
                 const newText = input.value.trim();
                 taskElement.textContent = newText || currentText;
                 taskElement.setAttribute('onclick', 'editTask(this)');
+                taskElement.draggable = true;
             });
 
             input.addEventListener('keydown', function (event) {
@@ -114,9 +123,48 @@
 
             taskElement.textContent = '';
             taskElement.removeAttribute('onclick');
+            taskElement.draggable = false;
             taskElement.appendChild(input);
             input.focus();
         }
+
+        // Drag-and-Drop Handlers
+        let draggedTask = null;
+
+        function handleDragStart(event) {
+            draggedTask = this;
+            setTimeout(() => this.classList.add('dragging'), 0);
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedTask = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+        }
+
+        function handleDrop(event) {
+            if (draggedTask) {
+                const column = this;
+                column.insertBefore(draggedTask, column.querySelector('.add-button'));
+            }
+        }
+
+        // Add event listeners to columns
+        const columns = document.querySelectorAll('.column');
+        columns.forEach(column => {
+            column.addEventListener('dragover', handleDragOver);
+            column.addEventListener('drop', handleDrop);
+        });
+
+        // Add drag events to initial tasks
+        const tasks = document.querySelectorAll('.card');
+        tasks.forEach(task => {
+            task.addEventListener('dragstart', handleDragStart);
+            task.addEventListener('dragend', handleDragEnd);
+        });
     </script>
 </body>
 </html>
