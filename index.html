@@ -77,6 +77,32 @@
         .delete-button:hover {
             background-color: darkred;
         }
+        .description {
+            display: none;
+            background-color: #f0f0f0;
+            padding: 0.5rem;
+            margin-top: 0.5rem;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .description.minimized {
+            display: block;
+            max-height: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .toggle-description {
+            background-color: #0079bf;
+            color: white;
+            border: none;
+            padding: 0.3rem;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+        .toggle-description:hover {
+            background-color: #005f8b;
+        }
     </style>
 </head>
 <body>
@@ -90,6 +116,9 @@
             <div class="card" draggable="true">
                 <span onclick="editTask(this)">Task 1</span>
                 <span class="person" onclick="editPerson(this)">Assigned to: John Doe</span>
+                <div class="description minimized" onclick="toggleDescription(this)">
+                    <p>This is the task description.</p>
+                </div>
                 <button class="delete-button" onclick="deleteTask(this)">Delete</button>
             </div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
@@ -114,6 +143,9 @@
             newTask.innerHTML = `
                 <span onclick="editTask(this)">New Task</span>
                 <span class="person" onclick="editPerson(this)">Assigned to: Click to Add</span>
+                <div class="description minimized" onclick="toggleDescription(this)">
+                    <p>This is a new task description.</p>
+                </div>
                 <button class="delete-button" onclick="deleteTask(this)">Delete</button>
             `;
             newTask.addEventListener('dragstart', handleDragStart);
@@ -171,6 +203,11 @@
         function deleteTask(buttonElement) {
             const task = buttonElement.parentElement;
             task.remove();
+        }
+
+        // Toggle Description Minimized/Expanded
+        function toggleDescription(descriptionElement) {
+            descriptionElement.classList.toggle('minimized');
         }
 
         // Drag-and-Drop Handlers
