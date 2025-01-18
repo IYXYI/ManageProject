@@ -3,10 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Flask App</title>
+    <title>Task Management Tool</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #0079bf;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .board {
+            display: flex;
+            gap: 1rem;
+            padding: 1rem;
+        }
+        .column {
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 1rem;
+            width: 30%;
+        }
+        .column h2 {
+            margin-top: 0;
+        }
+        .card {
+            background-color: #e0f7fa;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
 </head>
 <body>
-    <h1>Hello, Flask with HTML!</h1>
-    <p>This is a simple HTML page served with Flask.</p>
+    <header>
+        <h1>Task Management Tool</h1>
+        <p>Organize your tasks easily!</p>
+    </header>
+    <div class="board">
+        <div class="column">
+            <h2>To Do</h2>
+            <div class="card">Task 1</div>
+            <div class="card">Task 2</div>
+            <div class="card">Task 3</div>
+        </div>
+        <div class="column">
+            <h2>Doing</h2>
+            <div class="card">Task 4</div>
+            <div class="card">Task 5</div>
+        </div>
+        <div class="column">
+            <h2>Done</h2>
+            <div class="card">Task 6</div>
+            <div class="card">Task 7</div>
+        </div>
+    </div>
 </body>
 </html>
