@@ -60,13 +60,22 @@
         .add-button:hover {
             background-color: #005f8b;
         }
-        .progress {
-            margin-top: 0.5rem;
-        }
         .person {
             font-size: 0.9rem;
             color: #0079bf;
             font-weight: bold;
+        }
+        .delete-button {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 0.3rem;
+            border-radius: 5px;
+            cursor: pointer;
+            align-self: flex-end;
+        }
+        .delete-button:hover {
+            background-color: darkred;
         }
     </style>
 </head>
@@ -78,11 +87,10 @@
     <div class="board">
         <div class="column" id="todo">
             <h2>To Do</h2>
-            <div class="card" draggable="true" onclick="editTask(this)">
-                <span>Task 1</span>
-                <input type="range" class="progress" min="0" max="100" value="0" onchange="updateProgress(this)" />
-                <span class="progress-value">Progress: 0%</span>
+            <div class="card" draggable="true">
+                <span onclick="editTask(this)">Task 1</span>
                 <span class="person" onclick="editPerson(this)">Assigned to: John Doe</span>
+                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
             </div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
@@ -104,10 +112,9 @@
             newTask.className = 'card';
             newTask.draggable = true;
             newTask.innerHTML = `
-                <span onclick="editTask(this.parentElement)">New Task</span>
-                <input type="range" class="progress" min="0" max="100" value="0" onchange="updateProgress(this)" />
-                <span class="progress-value">Progress: 0%</span>
+                <span onclick="editTask(this)">New Task</span>
                 <span class="person" onclick="editPerson(this)">Assigned to: Click to Add</span>
+                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
             `;
             newTask.addEventListener('dragstart', handleDragStart);
             newTask.addEventListener('dragend', handleDragEnd);
@@ -116,15 +123,13 @@
 
         // Edit Task Name
         function editTask(taskElement) {
-            const taskText = taskElement.querySelector('span');
-            const currentText = taskText.textContent;
+            const currentText = taskElement.textContent;
             const input = document.createElement('input');
             input.type = 'text';
             input.value = currentText;
 
             input.addEventListener('blur', function () {
-                taskText.textContent = input.value.trim() || currentText;
-                taskElement.appendChild(taskText);
+                taskElement.textContent = input.value.trim() || currentText;
                 input.remove();
             });
 
@@ -134,7 +139,7 @@
                 }
             });
 
-            taskElement.replaceChild(input, taskText);
+            taskElement.replaceWith(input);
             input.focus();
         }
 
@@ -162,10 +167,10 @@
             input.focus();
         }
 
-        // Update Progress
-        function updateProgress(progressElement) {
-            const progressValue = progressElement.nextElementSibling;
-            progressValue.textContent = `Progress: ${progressElement.value}%`;
+        // Delete Task
+        function deleteTask(buttonElement) {
+            const task = buttonElement.parentElement;
+            task.remove();
         }
 
         // Drag-and-Drop Handlers
