@@ -41,6 +41,9 @@
             padding: 1rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
         }
         .card.dragging {
             opacity: 0.5;
@@ -57,6 +60,14 @@
         .add-button:hover {
             background-color: #005f8b;
         }
+        .progress {
+            margin-top: 0.5rem;
+        }
+        .person {
+            font-size: 0.9rem;
+            color: #0079bf;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -67,52 +78,54 @@
     <div class="board">
         <div class="column" id="todo">
             <h2>To Do</h2>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 1</div>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 2</div>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 3</div>
+            <div class="card" draggable="true" onclick="editTask(this)">
+                <span>Task 1</span>
+                <input type="range" class="progress" min="0" max="100" value="0" onchange="updateProgress(this)" />
+                <span class="progress-value">Progress: 0%</span>
+                <span class="person" onclick="editPerson(this)">Assigned to: John Doe</span>
+            </div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
         <div class="column" id="doing">
             <h2>Doing</h2>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 4</div>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 5</div>
             <button class="add-button" onclick="addTask('doing')">+ Add Task</button>
         </div>
         <div class="column" id="done">
             <h2>Done</h2>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 6</div>
-            <div class="card" draggable="true" onclick="editTask(this)">Task 7</div>
             <button class="add-button" onclick="addTask('done')">+ Add Task</button>
         </div>
     </div>
 
     <script>
-        // Allow adding new tasks
+        // Add Task
         function addTask(columnId) {
             const column = document.getElementById(columnId);
             const newTask = document.createElement('div');
             newTask.className = 'card';
             newTask.draggable = true;
-            newTask.textContent = 'New Task';
-            newTask.setAttribute('onclick', 'editTask(this)');
+            newTask.innerHTML = `
+                <span onclick="editTask(this.parentElement)">New Task</span>
+                <input type="range" class="progress" min="0" max="100" value="0" onchange="updateProgress(this)" />
+                <span class="progress-value">Progress: 0%</span>
+                <span class="person" onclick="editPerson(this)">Assigned to: Click to Add</span>
+            `;
             newTask.addEventListener('dragstart', handleDragStart);
             newTask.addEventListener('dragend', handleDragEnd);
             column.insertBefore(newTask, column.querySelector('.add-button'));
         }
 
-        // Allow editing tasks
+        // Edit Task Name
         function editTask(taskElement) {
-            const currentText = taskElement.textContent;
+            const taskText = taskElement.querySelector('span');
+            const currentText = taskText.textContent;
             const input = document.createElement('input');
             input.type = 'text';
             input.value = currentText;
-            input.style.width = '100%';
 
             input.addEventListener('blur', function () {
-                const newText = input.value.trim();
-                taskElement.textContent = newText || currentText;
-                taskElement.setAttribute('onclick', 'editTask(this)');
-                taskElement.draggable = true;
+                taskText.textContent = input.value.trim() || currentText;
+                taskElement.appendChild(taskText);
+                input.remove();
             });
 
             input.addEventListener('keydown', function (event) {
@@ -121,11 +134,38 @@
                 }
             });
 
-            taskElement.textContent = '';
-            taskElement.removeAttribute('onclick');
-            taskElement.draggable = false;
-            taskElement.appendChild(input);
+            taskElement.replaceChild(input, taskText);
             input.focus();
+        }
+
+        // Edit Assigned Person
+        function editPerson(personElement) {
+            const currentPerson = personElement.textContent.replace('Assigned to: ', '').trim();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentPerson;
+
+            input.addEventListener('blur', function () {
+                const newPerson = input.value.trim();
+                personElement.textContent = `Assigned to: ${newPerson || currentPerson}`;
+                input.remove();
+            });
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    input.blur();
+                }
+            });
+
+            personElement.textContent = '';
+            personElement.appendChild(input);
+            input.focus();
+        }
+
+        // Update Progress
+        function updateProgress(progressElement) {
+            const progressValue = progressElement.nextElementSibling;
+            progressValue.textContent = `Progress: ${progressElement.value}%`;
         }
 
         // Drag-and-Drop Handlers
