@@ -28,6 +28,8 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 1rem;
             width: 30%;
+            display: flex;
+            flex-direction: column;
         }
         .column h2 {
             margin-top: 0;
@@ -38,25 +40,18 @@
             margin-bottom: 1rem;
             padding: 1rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
         }
-        .add-task {
-            margin-top: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .add-task input, .add-task select, .add-task button {
-            padding: 0.5rem;
-            font-size: 1rem;
-        }
-        .add-task button {
+        .add-button {
             background-color: #0079bf;
             color: white;
             border: none;
+            padding: 0.5rem;
             border-radius: 5px;
             cursor: pointer;
+            margin-top: 1rem;
         }
-        .add-task button:hover {
+        .add-button:hover {
             background-color: #005f8b;
         }
     </style>
@@ -69,53 +64,58 @@
     <div class="board">
         <div class="column" id="todo">
             <h2>To Do</h2>
-            <div class="card">Task 1</div>
-            <div class="card">Task 2</div>
-            <div class="card">Task 3</div>
+            <div class="card" onclick="editTask(this)">Task 1</div>
+            <div class="card" onclick="editTask(this)">Task 2</div>
+            <div class="card" onclick="editTask(this)">Task 3</div>
+            <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
         <div class="column" id="doing">
             <h2>Doing</h2>
-            <div class="card">Task 4</div>
-            <div class="card">Task 5</div>
+            <div class="card" onclick="editTask(this)">Task 4</div>
+            <div class="card" onclick="editTask(this)">Task 5</div>
+            <button class="add-button" onclick="addTask('doing')">+ Add Task</button>
         </div>
         <div class="column" id="done">
             <h2>Done</h2>
-            <div class="card">Task 6</div>
-            <div class="card">Task 7</div>
+            <div class="card" onclick="editTask(this)">Task 6</div>
+            <div class="card" onclick="editTask(this)">Task 7</div>
+            <button class="add-button" onclick="addTask('done')">+ Add Task</button>
         </div>
-    </div>
-    <div class="add-task">
-        <input type="text" id="taskInput" placeholder="Enter task description">
-        <select id="taskColumn">
-            <option value="todo">To Do</option>
-            <option value="doing">Doing</option>
-            <option value="done">Done</option>
-        </select>
-        <button onclick="addTask()">Add Task</button>
     </div>
 
     <script>
-        function addTask() {
-            const taskInput = document.getElementById('taskInput');
-            const taskColumn = document.getElementById('taskColumn');
-            
-            const taskText = taskInput.value.trim();
-            const columnId = taskColumn.value;
-
-            if (taskText === '') {
-                alert('Please enter a task description!');
-                return;
-            }
-
+        function addTask(columnId) {
             const column = document.getElementById(columnId);
             const newTask = document.createElement('div');
             newTask.className = 'card';
-            newTask.textContent = taskText;
+            newTask.textContent = 'New Task';
+            newTask.setAttribute('onclick', 'editTask(this)');
+            column.insertBefore(newTask, column.querySelector('.add-button'));
+        }
 
-            column.appendChild(newTask);
+        function editTask(taskElement) {
+            const currentText = taskElement.textContent;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.style.width = '100%';
 
-            // Clear input field
-            taskInput.value = '';
+            input.addEventListener('blur', function () {
+                const newText = input.value.trim();
+                taskElement.textContent = newText || currentText;
+                taskElement.setAttribute('onclick', 'editTask(this)');
+            });
+
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    input.blur();
+                }
+            });
+
+            taskElement.textContent = '';
+            taskElement.removeAttribute('onclick');
+            taskElement.appendChild(input);
+            input.focus();
         }
     </script>
 </body>
