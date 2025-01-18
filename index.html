@@ -41,12 +41,44 @@
             padding: 1rem;
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
             cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
         }
         .card.dragging {
             opacity: 0.5;
+        }
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .task-title {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .person {
+            font-size: 0.9rem;
+            color: #0079bf;
+            margin-bottom: 0.5rem;
+        }
+        .progress-container {
+            margin: 0.5rem 0;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #ddd;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.3s ease;
+        }
+        .progress-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 0.2rem;
         }
         .add-button {
             background-color: #0079bf;
@@ -60,57 +92,35 @@
         .add-button:hover {
             background-color: #005f8b;
         }
-        .person {
-            font-size: 0.9rem;
-            color: #0079bf;
-            font-weight: bold;
-        }
         .delete-button {
-            background-color: red;
+            background-color: #ff4444;
             color: white;
             border: none;
-            padding: 0.3rem;
-            border-radius: 5px;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
             cursor: pointer;
-            align-self: flex-end;
+            font-size: 0.8rem;
         }
         .delete-button:hover {
-            background-color: darkred;
+            background-color: #cc0000;
         }
         .description {
-            display: none;
             background-color: #f0f0f0;
             padding: 0.5rem;
             margin-top: 0.5rem;
             border-radius: 5px;
             font-size: 0.9rem;
         }
-        .description.minimized {
-            display: block;
-            max-height: 50px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        .toggle-description {
-            background-color: #0079bf;
-            color: white;
-            border: none;
-            padding: 0.3rem;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .toggle-description:hover {
-            background-color: #005f8b;
-        }
         .edit-mode input, .edit-mode textarea {
             width: 100%;
             padding: 0.5rem;
-            margin-top: 0.5rem;
-            font-size: 1rem;
+            margin-bottom: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 3px;
         }
-        .edit-mode .add-button {
-            margin-top: 1rem;
+        .edit-mode input[type="range"] {
+            width: 100%;
+            margin: 1rem 0;
         }
     </style>
 </head>
@@ -123,12 +133,18 @@
         <div class="column" id="todo">
             <h2>To Do</h2>
             <div class="card" draggable="true" ondblclick="editTask(this)">
-                <span>Task 1</span>
-                <span class="person">Assigned to: John Doe</span>
-                <div class="description minimized">
-                    <p>This is the task description.</p>
+                <div class="task-header">
+                    <div class="task-title">Task 1</div>
+                    <button class="delete-button" onclick="deleteTask(this)">×</button>
                 </div>
-                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+                <div class="person">Assigned to: John Doe</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-label">Progress: 0%</div>
+                </div>
+                <div class="description">This is the task description.</div>
             </div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
@@ -143,19 +159,24 @@
     </div>
 
     <script>
-        // Add Task
         function addTask(columnId) {
             const column = document.getElementById(columnId);
             const newTask = document.createElement('div');
             newTask.className = 'card';
             newTask.draggable = true;
             newTask.innerHTML = `
-                <span>New Task</span>
-                <span class="person">Assigned to: Click to Add</span>
-                <div class="description minimized">
-                    <p>This is a new task description.</p>
+                <div class="task-header">
+                    <div class="task-title">New Task</div>
+                    <button class="delete-button" onclick="deleteTask(this)">×</button>
                 </div>
-                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+                <div class="person">Assigned to: Click to edit</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-label">Progress: 0%</div>
+                </div>
+                <div class="description">Click to add description</div>
             `;
             newTask.addEventListener('dragstart', handleDragStart);
             newTask.addEventListener('dragend', handleDragEnd);
@@ -163,130 +184,74 @@
             column.insertBefore(newTask, column.querySelector('.add-button'));
         }
 
-        // Edit Task (on double-click)
         function editTask(cardElement) {
-            const taskName = cardElement.querySelector('span');
-            const personAssigned = cardElement.querySelector('.person');
-            const description = cardElement.querySelector('.description');
+            const taskTitle = cardElement.querySelector('.task-title').textContent;
+            const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
+            const description = cardElement.querySelector('.description').textContent;
+            const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
+
+            cardElement.innerHTML = `
+                <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
+                <input type="text" class="edit-person" value="${person}" placeholder="Assigned Person">
+                <textarea class="edit-description" placeholder="Task Description">${description}</textarea>
+                <div class="progress-container">
+                    <input type="range" class="edit-progress" value="${progress}" min="0" max="100">
+                    <div class="progress-label">Progress: ${progress}%</div>
+                </div>
+                <button class="add-button" onclick="saveTask(this.parentElement)">Save</button>
+                <button class="add-button" onclick="cancelEdit(this.parentElement)">Cancel</button>
+            `;
 
             cardElement.classList.add('edit-mode');
-
-            // Convert task name to an input field
-            const taskNameInput = document.createElement('input');
-            taskNameInput.type = 'text';
-            taskNameInput.value = taskName.textContent;
-
-            // Convert assigned person to an input field
-            const personInput = document.createElement('input');
-            personInput.type = 'text';
-            personInput.value = personAssigned.textContent.replace('Assigned to: ', '').trim();
-
-            // Convert description to an input field
-            const descriptionInput = document.createElement('textarea');
-            descriptionInput.value = description.querySelector('p').textContent;
-
-            // Insert inputs into the card
-            cardElement.innerHTML = ''; // Clear existing content
-            cardElement.appendChild(taskNameInput);
-            cardElement.appendChild(personInput);
-            cardElement.appendChild(descriptionInput);
-
-            // Add save and cancel buttons
-            const saveButton = document.createElement('button');
-            saveButton.textContent = 'Save';
-            saveButton.classList.add('add-button');
-            saveButton.onclick = function() {
-                taskName.textContent = taskNameInput.value;
-                personAssigned.textContent = 'Assigned to: ' + personInput.value;
-                description.querySelector('p').textContent = descriptionInput.value;
-                saveTask(cardElement);
-            };
-
-            const cancelButton = document.createElement('button');
-            cancelButton.textContent = 'Cancel';
-            cancelButton.classList.add('add-button');
-            cancelButton.onclick = function() {
-                cancelEdit(cardElement);
-            };
-
-            cardElement.appendChild(saveButton);
-            cardElement.appendChild(cancelButton);
+            
+            // Update progress label while sliding
+            const progressInput = cardElement.querySelector('.edit-progress');
+            const progressLabel = cardElement.querySelector('.progress-label');
+            progressInput.addEventListener('input', function() {
+                progressLabel.textContent = `Progress: ${this.value}%`;
+            });
         }
 
-        // Save Task (go back to normal mode)
         function saveTask(cardElement) {
-            const taskName = cardElement.querySelector('input[type="text"]');
-            const personAssigned = cardElement.querySelector('input[type="text"]');
-            const description = cardElement.querySelector('textarea');
+            const taskTitle = cardElement.querySelector('.edit-title').value;
+            const person = cardElement.querySelector('.edit-person').value;
+            const description = cardElement.querySelector('.edit-description').value;
+            const progress = cardElement.querySelector('.edit-progress').value;
 
-            // Clear edit fields
-            if (taskName) taskName.remove();
-            if (personAssigned) personAssigned.remove();
-            if (description) description.remove();
-
-            // Restore task content
-            const taskNameSpan = document.createElement('span');
-            taskNameSpan.textContent = taskName.value;
-            cardElement.appendChild(taskNameSpan);
-
-            const personAssignedSpan = document.createElement('span');
-            personAssignedSpan.textContent = 'Assigned to: ' + personAssigned.value;
-            personAssignedSpan.classList.add('person');
-            cardElement.appendChild(personAssignedSpan);
-
-            const descriptionDiv = document.createElement('div');
-            descriptionDiv.classList.add('description');
-            descriptionDiv.classList.add('minimized');
-            descriptionDiv.innerHTML = `<p>${description.value}</p>`;
-            cardElement.appendChild(descriptionDiv);
-
-            // Remove the save/cancel buttons
-            const buttons = cardElement.querySelectorAll('.add-button');
-            buttons.forEach(button => button.remove());
+            cardElement.innerHTML = `
+                <div class="task-header">
+                    <div class="task-title">${taskTitle}</div>
+                    <button class="delete-button" onclick="deleteTask(this)">×</button>
+                </div>
+                <div class="person">Assigned to: ${person}</div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: ${progress}%"></div>
+                    </div>
+                    <div class="progress-label">Progress: ${progress}%</div>
+                </div>
+                <div class="description">${description}</div>
+            `;
 
             cardElement.classList.remove('edit-mode');
+            cardElement.draggable = true;
         }
 
-        // Cancel edit mode
         function cancelEdit(cardElement) {
-            const taskName = cardElement.querySelector('input[type="text"]');
-            const personAssigned = cardElement.querySelector('input[type="text"]');
-            const description = cardElement.querySelector('textarea');
+            const taskTitle = cardElement.querySelector('.edit-title').value;
+            const person = cardElement.querySelector('.edit-person').value;
+            const description = cardElement.querySelector('.edit-description').value;
+            const progress = cardElement.querySelector('.edit-progress').value;
 
-            if (taskName) taskName.remove();
-            if (personAssigned) personAssigned.remove();
-            if (description) description.remove();
-
-            cardElement.classList.remove('edit-mode');
-
-            // Restore original content
-            const taskNameSpan = document.createElement('span');
-            taskNameSpan.textContent = taskName.value;
-            cardElement.appendChild(taskNameSpan);
-
-            const personAssignedSpan = document.createElement('span');
-            personAssignedSpan.textContent = 'Assigned to: ' + personAssigned.value;
-            personAssignedSpan.classList.add('person');
-            cardElement.appendChild(personAssignedSpan);
-
-            const descriptionDiv = document.createElement('div');
-            descriptionDiv.classList.add('description');
-            descriptionDiv.classList.add('minimized');
-            descriptionDiv.innerHTML = `<p>${description.value}</p>`;
-            cardElement.appendChild(descriptionDiv);
-
-            // Remove the save/cancel buttons
-            const buttons = cardElement.querySelectorAll('.add-button');
-            buttons.forEach(button => button.remove());
+            // Restore the original content
+            saveTask(cardElement);
         }
 
-        // Delete Task
         function deleteTask(buttonElement) {
-            const task = buttonElement.parentElement;
+            const task = buttonElement.closest('.card');
             task.remove();
         }
 
-        // Drag-and-Drop Handlers
         let draggedTask = null;
 
         function handleDragStart(event) {
@@ -304,6 +269,7 @@
         }
 
         function handleDrop(event) {
+            event.preventDefault();
             if (draggedTask) {
                 const column = this;
                 column.insertBefore(draggedTask, column.querySelector('.add-button'));
