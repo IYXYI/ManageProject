@@ -411,22 +411,16 @@ async function handleDrop(event) {
 
                 if (error) throw error;
 
-                // Move task to new column visually
-                column.insertBefore(draggedTask, column.querySelector('.add-button'));
-
-                // Optionally, update the task list in the local `tasks` array to ensure consistency
-                const updatedTask = { ...task, status: newStatus };
-                const index = tasks.findIndex(t => t.id === taskId);
-                tasks[index] = updatedTask;
-
+                // Optionally, re-fetch tasks to ensure consistency
+                loadTasks(); // This will refresh the task data and re-render tasks
             } catch (error) {
                 console.error('Error updating task status:', error);
-                // Fallback: Save tasks in localStorage for recovery
-                localStorage.setItem('tasks', JSON.stringify(tasks));
+                localStorage.setItem('tasks', JSON.stringify(tasks)); // Fallback
             }
         }
     }
 }
+
 
 
 
