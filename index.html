@@ -225,10 +225,12 @@ function createTaskElement(task) {
 // Load tasks function
 async function loadTasks() {
     try {
+        console.log('Loading tasks...');
+        
         // Clear existing tasks
         document.querySelectorAll('.card').forEach(card => card.remove());
 
-        // Get tasks from Supabase
+        // Get tasks from Supabase with explicit ordering
         const { data, error } = await supabaseClient
             .from('tasks')
             .select('*')
@@ -237,16 +239,20 @@ async function loadTasks() {
         if (error) throw error;
 
         console.log('Loaded tasks:', data);
-        tasks = data; // Update the tasks array with the loaded data
+        
+        // Update tasks array even if empty
+        tasks = data || [];
 
         // Create elements for each task
-        data.forEach(task => createTaskElement(task));
+        tasks.forEach(task => {
+            console.log('Creating element for task:', task);
+            createTaskElement(task);
+        });
     } catch (error) {
-        console.error('Error loading tasks:', error.message);
-        alert('Error loading tasks. Check console for details.');
+        console.error('Error loading tasks:', error);
+        alert(`Error loading tasks: ${error.message}`);
     }
 }
-
 // Save task function
 async function saveTask(cardElement) {
     const taskId = cardElement.dataset.taskId;
@@ -287,7 +293,7 @@ async function saveTask(cardElement) {
 
 async function addTask(columnId) {
     try {
-        // Create the new task object
+        // Create the new task object with all required fields
         const newTask = {
             title: 'New Task',
             assignedto: 'Click to Add',
@@ -297,52 +303,50 @@ async function addTask(columnId) {
             createdat: new Date().toISOString()
         };
 
+        // Log the task being created
+        console.log('Creating task:', newTask);
+
         // Insert the task into Supabase
         const { data, error } = await supabaseClient
             .from('tasks')
             .insert([newTask])
-            .select()
-            .single();
+            .select();
 
-        if (error) {
-            console.error('Supabase error:', error);
-            throw error;
+        if (error) throw error;
+
+        // Log successful creation
+        console.log('Task created:', data);
+
+        // Add to local tasks array and create visual element
+        if (data && data[0]) {
+            tasks.push(data[0]);
+            createTaskElement(data[0]);
         }
-
-        console.log('Task created successfully:', data);
-
-        // Create the visual element
-        createTaskElement(data);
-        
-        // Add to local tasks array
-        tasks.push(data);
     } catch (error) {
-        console.error('Error adding task:', error.message);
-        alert('Error adding task. Check console for details.');
+        console.error('Error adding task:', error);
+        alert(`Error adding task: ${error.message}`);
     }
 }
 
 async function initializeTable() {
     try {
-        const { data, error } = await supabaseClient
-            .rpc('initialize_tasks_table');
-            
-        if (error) {
-            console.error('Initialization error details:', {
-                message: error.message,
-                details: error.details,
-                hint: error.hint
-            });
-            throw error;
+        // First check if the table exists and has the correct structure
+        const { data: existingData, error: checkError } = await supabaseClient
+            .from('tasks')
+            .select('*')
+            .limit(1);
+
+        if (checkError && checkError.code === '42P01') { // Table doesn't exist
+            console.log('Table needs to be created');
+            const { error } = await supabaseClient
+                .rpc('initialize_tasks_table');
+                
+            if (error) throw error;
         }
         
-        console.log('Table initialized successfully:', data);
+        console.log('Table initialized successfully');
     } catch (error) {
         console.error('Error initializing table:', error);
-        // Add more detailed error information
-        if (error.status === 401) {
-            console.error('Authentication error - check your API key and policies');
-        }
     }
 }
                
@@ -527,28 +531,22 @@ async function deleteTask(buttonElement) {
         });
 
             // Add this to test the connection when the page loads
-       document.addEventListener('DOMContentLoaded', async () => {
-        console.log('DOMContentLoaded event fired');
-        try {
-            console.log('Starting initialization...');
-            // Initialize the table
-            await initializeTable();
-            console.log('Table initialized');
-            
-            // Then load tasks
-            await loadTasks();
-            console.log('Tasks loaded');
-            
-            console.log('Application initialized successfully');
-        } catch (error) {
-            console.error('Initialization error:', error);
-            // More detailed error logging
-            if (error.response) {
-                console.error('Error response:', error.response);
-            }
-            alert('Error initializing application. Check console for details.');
-        }
-    });
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        console.log('Starting initialization with Supabase URL:', supabaseClient.supabaseUrl);
+        
+        // Initialize the table
+        await initializeTable();
+        
+        // Load tasks
+        await loadTasks();
+        
+        console.log('Application initialized successfully');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        alert(`Failed to initialize application: ${error.message}`);
+    }
+});
     </script>
 </body>
 </html>
