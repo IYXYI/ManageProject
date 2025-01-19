@@ -324,9 +324,6 @@ async function addTask(columnId) {
             createdat: new Date().toISOString()
         };
 
-        // Log the task being created
-        console.log('Creating task:', newTask);
-
         // Insert the task into Supabase
         const { data, error } = await supabaseClient
             .from('tasks')
@@ -335,16 +332,9 @@ async function addTask(columnId) {
 
         if (error) throw error;
 
-        // Log successful creation
-        console.log('Task created:', data);
-
-        // Add to local tasks array and create visual element
+        // Add task to the local array and create visual element
         if (data && data[0]) {
-            // Remove any existing task with the same ID from the tasks array
-            tasks = tasks.filter(t => t.id !== data[0].id);
-            // Add the new task to the array
-            tasks.push(data[0]);
-            // Create the visual element
+            tasks.push(data[0]);  // Adding to local tasks array
             createTaskElement(data[0]);
         }
     } catch (error) {
@@ -352,6 +342,7 @@ async function addTask(columnId) {
         alert(`Error adding task: ${error.message}`);
     }
 }
+
         
 
 async function initializeTable() {
@@ -390,7 +381,9 @@ async function deleteTask(buttonElement) {
 
         if (error) throw error;
 
-        task.remove();
+        // Remove the task from local tasks array
+        tasks = tasks.filter(t => t.id !== taskId); // Removing task locally
+        task.remove();  // Removing task from UI
     } catch (error) {
         console.error('Error deleting task:', error.message);
         alert('Error deleting task. Check console for details.');
@@ -418,8 +411,11 @@ async function handleDrop(event) {
 
                 if (error) throw error;
 
-                // Move task to new column
+                // Move task to new column visually
                 column.insertBefore(draggedTask, column.querySelector('.add-button'));
+
+                // Reload tasks to ensure everything is synced
+                await loadTasks(); // Ensure the page reloads with updated task status
             } catch (error) {
                 console.error('Error updating task status:', error);
                 // Fallback: Save tasks in localStorage for recovery
@@ -428,6 +424,7 @@ async function handleDrop(event) {
         }
     }
 }
+
 
         //////////////////
 
@@ -518,6 +515,16 @@ async function handleDrop(event) {
                     <button class="delete-button" onclick="deleteTask(this)">Delete</button>
                 `;
         }
+
+        const columns = document.querySelectorAll('.column');
+        columns.forEach(column => {
+            column.addEventListener('dragover', (event) => {
+                event.preventDefault();
+            });
+            column.addEventListener('drop', handleDrop);
+        });
+        
+                
 
         function handleDragStart(event) {
             draggedTask = this;
