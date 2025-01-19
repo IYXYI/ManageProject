@@ -45,19 +45,48 @@
         .card.dragging {
             opacity: 0.5;
         }
-        .task-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.5rem;
+        .add-button {
+            background-color: #0079bf;
+            color: white;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 1rem;
         }
-        .task-title {
-            font-weight: bold;
-            margin-bottom: 0.5rem;
+        .add-button:hover {
+            background-color: #005f8b;
         }
         .person {
             font-size: 0.9rem;
             color: #0079bf;
+            font-weight: bold;
+            display: block;
+            margin: 0.5rem 0;
+        }
+        .delete-button {
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            padding: 0.3rem 0.6rem;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 0.5rem;
+        }
+        .delete-button:hover {
+            background-color: #cc0000;
+        }
+        .description {
+            background-color: #f0f0f0;
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        .task-title {
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: block;
             margin-bottom: 0.5rem;
         }
         .progress-container {
@@ -75,52 +104,25 @@
             background-color: #4CAF50;
             transition: width 0.3s ease;
         }
-        .progress-label {
+        .progress-value {
             font-size: 0.8rem;
             color: #666;
             margin-top: 0.2rem;
         }
-        .add-button {
-            background-color: #0079bf;
+        .sync-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 0.5rem;
+            padding: 10px 20px;
             border-radius: 5px;
             cursor: pointer;
-            margin-top: 1rem;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
         }
-        .add-button:hover {
-            background-color: #005f8b;
-        }
-        .delete-button {
-            background-color: #ff4444;
-            color: white;
-            border: none;
-            padding: 0.3rem 0.6rem;
-            border-radius: 3px;
-            cursor: pointer;
-            font-size: 0.8rem;
-        }
-        .delete-button:hover {
-            background-color: #cc0000;
-        }
-        .description {
-            background-color: #f0f0f0;
-            padding: 0.5rem;
-            margin-top: 0.5rem;
-            border-radius: 5px;
-            font-size: 0.9rem;
-        }
-        .edit-mode input, .edit-mode textarea {
-            width: 100%;
-            padding: 0.5rem;
-            margin-bottom: 0.5rem;
-            border: 1px solid #ddd;
-            border-radius: 3px;
-        }
-        .edit-mode input[type="range"] {
-            width: 100%;
-            margin: 1rem 0;
+        .sync-button:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
@@ -132,20 +134,6 @@
     <div class="board">
         <div class="column" id="todo">
             <h2>To Do</h2>
-            <div class="card" draggable="true" ondblclick="editTask(this)">
-                <div class="task-header">
-                    <div class="task-title">Task 1</div>
-                    <button class="delete-button" onclick="deleteTask(this)">×</button>
-                </div>
-                <div class="person">Assigned to: John Doe</div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: 0%"></div>
-                    </div>
-                    <div class="progress-label">Progress: 0%</div>
-                </div>
-                <div class="description">This is the task description.</div>
-            </div>
             <button class="add-button" onclick="addTask('todo')">+ Add Task</button>
         </div>
         <div class="column" id="doing">
@@ -157,99 +145,100 @@
             <button class="add-button" onclick="addTask('done')">+ Add Task</button>
         </div>
     </div>
+    <button class="sync-button" onclick="downloadCSV()">Download Updated CSV</button>
 
     <script>
-        function addTask(columnId) {
-            const column = document.getElementById(columnId);
+        let tasks = [];
+        let nextId = 1;
+
+        // Load and parse CSV file
+        async function loadTasks() {
+            try {
+                const response = await fetch('tasks.csv');
+                const csvText = await response.text();
+                const rows = csvText.split('\n').slice(1); // Skip header row
+                
+                tasks = rows.filter(row => row.trim()).map(row => {
+                    const [id, title, assignedTo, description, progress, status, createdAt] = row.split(',');
+                    nextId = Math.max(nextId, parseInt(id) + 1);
+                    return { id, title, assignedTo, description, progress, status, createdAt };
+                });
+
+                // Clear existing tasks
+                document.querySelectorAll('.card').forEach(card => card.remove());
+
+                // Create task elements
+                tasks.forEach(task => createTaskElement(task));
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            }
+        }
+
+        function createTaskElement(task) {
+            const column = document.getElementById(task.status);
             const newTask = document.createElement('div');
             newTask.className = 'card';
             newTask.draggable = true;
+            newTask.dataset.taskId = task.id;
+            
             newTask.innerHTML = `
-                <div class="task-header">
-                    <div class="task-title">New Task</div>
-                    <button class="delete-button" onclick="deleteTask(this)">×</button>
+                <span class="task-title">${task.title}</span>
+                <span class="person">Assigned to: ${task.assignedTo}</span>
+                <div class="description">
+                    <p>${task.description}</p>
                 </div>
-                <div class="person">Assigned to: Click to edit</div>
                 <div class="progress-container">
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: 0%"></div>
+                        <div class="progress-fill" style="width: ${task.progress}%"></div>
                     </div>
-                    <div class="progress-label">Progress: 0%</div>
+                    <div class="progress-value">Progress: ${task.progress}%</div>
                 </div>
-                <div class="description">Click to add description</div>
+                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
             `;
+
             newTask.addEventListener('dragstart', handleDragStart);
             newTask.addEventListener('dragend', handleDragEnd);
             newTask.ondblclick = function() { editTask(newTask); };
+            
             column.insertBefore(newTask, column.querySelector('.add-button'));
         }
 
-        function editTask(cardElement) {
-            const taskTitle = cardElement.querySelector('.task-title').textContent;
-            const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
-            const description = cardElement.querySelector('.description').textContent;
-            const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
-
-            cardElement.innerHTML = `
-                <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
-                <input type="text" class="edit-person" value="${person}" placeholder="Assigned Person">
-                <textarea class="edit-description" placeholder="Task Description">${description}</textarea>
-                <div class="progress-container">
-                    <input type="range" class="edit-progress" value="${progress}" min="0" max="100">
-                    <div class="progress-label">Progress: ${progress}%</div>
-                </div>
-                <button class="add-button" onclick="saveTask(this.parentElement)">Save</button>
-                <button class="add-button" onclick="cancelEdit(this.parentElement)">Cancel</button>
-            `;
-
-            cardElement.classList.add('edit-mode');
+        function addTask(columnId) {
+            const task = {
+                id: nextId++,
+                title: 'New Task',
+                assignedTo: 'Click to Add',
+                description: 'This is a new task description.',
+                progress: 0,
+                status: columnId,
+                createdAt: new Date().toISOString().split('T')[0]
+            };
             
-            // Update progress label while sliding
-            const progressInput = cardElement.querySelector('.edit-progress');
-            const progressLabel = cardElement.querySelector('.progress-label');
-            progressInput.addEventListener('input', function() {
-                progressLabel.textContent = `Progress: ${this.value}%`;
-            });
-        }
-
-        function saveTask(cardElement) {
-            const taskTitle = cardElement.querySelector('.edit-title').value;
-            const person = cardElement.querySelector('.edit-person').value;
-            const description = cardElement.querySelector('.edit-description').value;
-            const progress = cardElement.querySelector('.edit-progress').value;
-
-            cardElement.innerHTML = `
-                <div class="task-header">
-                    <div class="task-title">${taskTitle}</div>
-                    <button class="delete-button" onclick="deleteTask(this)">×</button>
-                </div>
-                <div class="person">Assigned to: ${person}</div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${progress}%"></div>
-                    </div>
-                    <div class="progress-label">Progress: ${progress}%</div>
-                </div>
-                <div class="description">${description}</div>
-            `;
-
-            cardElement.classList.remove('edit-mode');
-            cardElement.draggable = true;
-        }
-
-        function cancelEdit(cardElement) {
-            const taskTitle = cardElement.querySelector('.edit-title').value;
-            const person = cardElement.querySelector('.edit-person').value;
-            const description = cardElement.querySelector('.edit-description').value;
-            const progress = cardElement.querySelector('.edit-progress').value;
-
-            // Restore the original content
-            saveTask(cardElement);
+            tasks.push(task);
+            createTaskElement(task);
         }
 
         function deleteTask(buttonElement) {
             const task = buttonElement.closest('.card');
+            const taskId = task.dataset.taskId;
+            
+            tasks = tasks.filter(t => t.id != taskId);
             task.remove();
+        }
+
+        // Download updated CSV file
+        function downloadCSV() {
+            const header = 'id,title,assignedTo,description,progress,status,createdAt\n';
+            const csvContent = tasks.map(task => 
+                `${task.id},${task.title},${task.assignedTo},${task.description},${task.progress},${task.status},${task.createdAt}`
+            ).join('\n');
+
+            const blob = new Blob([header + csvContent], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.setAttribute('href', url);
+            a.setAttribute('download', 'tasks.csv');
+            a.click();
         }
 
         let draggedTask = null;
@@ -272,6 +261,11 @@
             event.preventDefault();
             if (draggedTask) {
                 const column = this;
+                const taskId = draggedTask.dataset.taskId;
+                const task = tasks.find(t => t.id == taskId);
+                if (task) {
+                    task.status = column.id;
+                }
                 column.insertBefore(draggedTask, column.querySelector('.add-button'));
             }
         }
@@ -283,12 +277,8 @@
             column.addEventListener('drop', handleDrop);
         });
 
-        // Add drag events to initial tasks
-        const tasks = document.querySelectorAll('.card');
-        tasks.forEach(task => {
-            task.addEventListener('dragstart', handleDragStart);
-            task.addEventListener('dragend', handleDragEnd);
-        });
+        // Load tasks when page loads
+        document.addEventListener('DOMContentLoaded', loadTasks);
     </script>
 </body>
 </html>
