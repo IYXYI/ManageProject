@@ -257,36 +257,7 @@
             event.preventDefault();
         }
 
-        function editTask(cardElement) {
-            const taskTitle = cardElement.querySelector('.task-title').textContent;
-            const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
-            const description = cardElement.querySelector('.description p').textContent;
-            const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
-
-            const originalContent = cardElement.innerHTML;
-            
-            cardElement.innerHTML = `
-                <div class="edit-form">
-                    <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
-                    <input type="text" class="edit-person" value="${person}" placeholder="Assigned Person">
-                    <textarea class="edit-description" placeholder="Task Description">${description}</textarea>
-                    <input type="range" class="edit-progress" value="${progress}" min="0" max="100" step="10">
-                    <div class="progress-value">Progress: ${progress}%</div>
-                    <div class="buttons-container">
-                        <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
-                        <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement, '${originalContent.replace(/'/g, "&#39;")}')">Cancel</button>
-                    </div>
-                </div>
-            `;
-
-            // Update progress value when slider changes
-            const progressSlider = cardElement.querySelector('.edit-progress');
-            const progressValue = cardElement.querySelector('.progress-value');
-            progressSlider.addEventListener('input', function() {
-                progressValue.textContent = `Progress: ${this.value}%`;
-            });
-        }
-
+        
         
         function handleDrop(event) {
             event.preventDefault();
@@ -307,6 +278,78 @@
             column.addEventListener('dragover', handleDragOver);
             column.addEventListener('drop', handleDrop);
         });
+
+
+
+        function editTask(cardElement) {
+    // Get the current task data
+    const taskTitle = cardElement.querySelector('.task-title').textContent;
+    const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
+    const description = cardElement.querySelector('.description p').textContent;
+    const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
+
+    const originalContent = cardElement.innerHTML;
+    
+    // Replace the card content with an editable form
+    cardElement.innerHTML = `
+        <div class="edit-form">
+            <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
+            <input type="text" class="edit-person" value="${person}" placeholder="Assigned Person">
+            <textarea class="edit-description" placeholder="Task Description">${description}</textarea>
+            <input type="range" class="edit-progress" value="${progress}" min="0" max="100" step="10">
+            <div class="progress-value">Progress: ${progress}%</div>
+            <div class="buttons-container">
+                <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
+                <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement, '${originalContent.replace(/'/g, "&#39;")}')">Cancel</button>
+            </div>
+        </div>
+    `;
+
+    // Update progress value when slider changes
+    const progressSlider = cardElement.querySelector('.edit-progress');
+    const progressValue = cardElement.querySelector('.progress-value');
+    progressSlider.addEventListener('input', function() {
+        progressValue.textContent = `Progress: ${this.value}%`;
+    });
+}
+
+// Save the task after editing
+function saveTask(cardElement) {
+    const taskId = cardElement.dataset.taskId;
+    const task = tasks.find(t => t.id == taskId);
+
+    const newTitle = cardElement.querySelector('.edit-title').value;
+    const newPerson = cardElement.querySelector('.edit-person').value;
+    const newDescription = cardElement.querySelector('.edit-description').value;
+    const newProgress = cardElement.querySelector('.edit-progress').value;
+
+    // Update the task object with the new values
+    task.title = newTitle;
+    task.assignedTo = newPerson;
+    task.description = newDescription;
+    task.progress = newProgress;
+
+    // Update the task element with the new values
+    cardElement.innerHTML = `
+        <span class="task-title">${task.title}</span>
+        <span class="person">Assigned to: ${task.assignedTo}</span>
+        <div class="description">
+            <p>${task.description}</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+            </div>
+            <div class="progress-value">Progress: ${task.progress}%</div>
+        </div>
+        <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+    `;
+}
+
+// Cancel editing and revert to original content
+function cancelEdit(cardElement, originalContent) {
+    cardElement.innerHTML = originalContent;
+}
 
         // Load tasks when page loads
         document.addEventListener('DOMContentLoaded', loadTasks);
