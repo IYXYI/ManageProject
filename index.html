@@ -174,40 +174,39 @@
 
     <script>
 
-        // Initialize Supabase client
-        const supabaseUrl = 'https://mdqyltfyihcvfqtkencr.supabase.co'
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcXlsdGZ5aWhjdmZxdGtlbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyODM4ODMsImV4cCI6MjA1Mjg1OTg4M30.6zQsOtsFbsOoivv_NK2-36VjY3NE9B3_wTxJGYnc8yE'
-        const supabase = supabase.createClient(supabaseUrl, supabaseKey)
 
+    // Initialize Supabase client (place this at the top of your script)
+    const supabase = createClient(
+        'https://mdqyltfyihcvfqtkencr.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcXlsdGZ5aWhjdmZxdGtlbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyODM4ODMsImV4cCI6MjA1Mjg1OTg4M30.6zQsOtsFbsOoivv_NK2-36VjY3NE9B3_wTxJGYnc8yE'
+    );
+        
         let tasks = [];
         let nextId = 1;
 
-        // Load tasks from Supabase
-        async function loadTasks() {
-            try {
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .select('*')
-                    .order('id');
+        // Load tasks function
+async function loadTasks() {
+    try {
+        // Clear existing tasks
+        document.querySelectorAll('.card').forEach(card => card.remove());
 
-                if (error) throw error;
+        // Get tasks from Supabase
+        const { data, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .order('createdAt', { ascending: false });
 
-                tasks = data;
-                nextId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+        if (error) throw error;
 
-                // Clear existing tasks
-                document.querySelectorAll('.card').forEach(card => card.remove());
-                
-                // Create task elements
-                tasks.forEach(task => createTaskElement(task));
-            } catch (error) {
-                console.error('Error loading tasks:', error);
-                // Fallback to localStorage if Supabase fails
-                const localTasks = JSON.parse(localStorage.getItem('tasks')) || [];
-                tasks = localTasks;
-                loadTasksFromLocal();
-            }
-        }
+        console.log('Loaded tasks:', data);
+
+        // Create elements for each task
+        data.forEach(task => createTaskElement(task));
+    } catch (error) {
+        console.error('Error loading tasks:', error.message);
+        alert('Error loading tasks. Check console for details.');
+    }
+}
 
         // Save task to Supabase
         async function saveTask(cardElement) {
@@ -248,59 +247,58 @@
             }
         }
 
-        // Add new task to Supabase
+        
+        // Add task function
         async function addTask(columnId) {
-            const task = {
-                id: nextId++,
-                title: 'New Task',
-                assignedTo: 'Click to Add',
-                description: 'This is a new task description.',
-                progress: 0,
-                status: columnId,
-                createdAt: new Date().toISOString()
-            };
-
             try {
-                const { error } = await supabase
+                // First, create the task object
+                const newTask = {
+                    title: 'New Task',
+                    assignedTo: 'Click to Add',
+                    description: 'This is a new task description.',
+                    progress: 0,
+                    status: columnId,
+                    createdAt: new Date().toISOString()
+                };
+        
+                // Insert into Supabase
+                const { data, error } = await supabase
                     .from('tasks')
-                    .insert([task]);
-
+                    .insert([newTask])
+                    .select()
+                    .single();
+        
                 if (error) throw error;
-
-                tasks.push(task);
-                createTaskElement(task);
+        
+                // If successful, create the UI element
+                console.log('Task added successfully:', data);
+                createTaskElement(data);
             } catch (error) {
-                console.error('Error adding task:', error);
-                // Fallback to localStorage
-                tasks.push(task);
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-                createTaskElement(task);
+                console.error('Error adding task:', error.message);
+                alert('Error adding task. Check console for details.');
             }
         }
+               
 
-        // Delete task from Supabase
-        async function deleteTask(buttonElement) {
-            const task = buttonElement.closest('.card');
-            const taskId = task.dataset.taskId;
+// Delete task function
+async function deleteTask(buttonElement) {
+    try {
+        const task = buttonElement.closest('.card');
+        const taskId = task.dataset.taskId;
 
-            try {
-                const { error } = await supabase
-                    .from('tasks')
-                    .delete()
-                    .eq('id', taskId);
+        const { error } = await supabase
+            .from('tasks')
+            .delete()
+            .eq('id', taskId);
 
-                if (error) throw error;
+        if (error) throw error;
 
-                tasks = tasks.filter(t => t.id != taskId);
-                task.remove();
-            } catch (error) {
-                console.error('Error deleting task:', error);
-                // Fallback to localStorage
-                tasks = tasks.filter(t => t.id != taskId);
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-                task.remove();
-            }
-        }
+        task.remove();
+    } catch (error) {
+        console.error('Error deleting task:', error.message);
+        alert('Error deleting task. Check console for details.');
+    }
+}
 
         // Update task status in Supabase when dragged
         async function handleDrop(event) {
@@ -337,35 +335,41 @@
 
 
 
-        function createTaskElement(task) {
-            const column = document.getElementById(task.status);
-            const newTask = document.createElement('div');
-            newTask.className = 'card';
-            newTask.draggable = true;
-            newTask.dataset.taskId = task.id;
-            
-            newTask.innerHTML = `
-                <span class="task-title">${task.title}</span>
-                <span class="person">Assigned to: ${task.assignedTo}</span>
-                <div class="description">
-                    <p>${task.description}</p>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${task.progress}%"></div>
-                    </div>
-                    <div class="progress-value">Progress: ${task.progress}%</div>
-                </div>
-                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
-            `;
+        // Create task element function (modified to work with Supabase data)
+function createTaskElement(task) {
+    const column = document.getElementById(task.status);
+    if (!column) {
+        console.error('Column not found:', task.status);
+        return;
+    }
 
-            newTask.addEventListener('dragstart', handleDragStart);
-            newTask.addEventListener('dragend', handleDragEnd);
-            newTask.ondblclick = function() { editTask(newTask); };
-            
-            column.insertBefore(newTask, column.querySelector('.add-button'));
-        }
+    const newTask = document.createElement('div');
+    newTask.className = 'card';
+    newTask.draggable = true;
+    newTask.dataset.taskId = task.id;
+    
+    newTask.innerHTML = `
+        <span class="task-title">${task.title}</span>
+        <span class="person">Assigned to: ${task.assignedTo}</span>
+        <div class="description">
+            <p>${task.description}</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+            </div>
+            <div class="progress-value">Progress: ${task.progress}%</div>
+        </div>
+        <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+    `;
 
+    newTask.addEventListener('dragstart', handleDragStart);
+    newTask.addEventListener('dragend', handleDragEnd);
+    newTask.ondblclick = function() { editTask(newTask); };
+    
+    column.insertBefore(newTask, column.querySelector('.add-button'));
+}
+        
         
         function editTask(cardElement) {
             const taskId = cardElement.dataset.taskId;
@@ -478,8 +482,26 @@
             column.addEventListener('drop', handleDrop);
         });
 
-        // Load tasks when page loads
-        document.addEventListener('DOMContentLoaded', loadTasks);
+        // Add this to test the connection when the page loads
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                // Test the connection
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('count')
+                    .single();
+        
+                if (error) throw error;
+        
+                console.log('Successfully connected to Supabase!');
+                
+                // Load tasks
+                await loadTasks();
+            } catch (error) {
+                console.error('Connection error:', error.message);
+                alert('Error connecting to database. Check console for details.');
+            }
+        });
     </script>
 </body>
 </html>
