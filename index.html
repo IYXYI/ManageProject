@@ -257,31 +257,34 @@
             event.preventDefault();
         }
 
-        function editTask(taskElement) {
-            const taskId = taskElement.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
-        
-            // Create input fields for editing task title and description
-            const titleInput = document.createElement('input');
-            titleInput.value = task.title;
-            titleInput.addEventListener('blur', () => {
-                task.title = titleInput.value;
-                taskElement.querySelector('.task-title').textContent = task.title;
+        function editTask(cardElement) {
+            const taskTitle = cardElement.querySelector('.task-title').textContent;
+            const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
+            const description = cardElement.querySelector('.description p').textContent;
+            const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
+
+            const originalContent = cardElement.innerHTML;
+            
+            cardElement.innerHTML = `
+                <div class="edit-form">
+                    <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
+                    <input type="text" class="edit-person" value="${person}" placeholder="Assigned Person">
+                    <textarea class="edit-description" placeholder="Task Description">${description}</textarea>
+                    <input type="range" class="edit-progress" value="${progress}" min="0" max="100" step="10">
+                    <div class="progress-value">Progress: ${progress}%</div>
+                    <div class="buttons-container">
+                        <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
+                        <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement, '${originalContent.replace(/'/g, "&#39;")}')">Cancel</button>
+                    </div>
+                </div>
+            `;
+
+            // Update progress value when slider changes
+            const progressSlider = cardElement.querySelector('.edit-progress');
+            const progressValue = cardElement.querySelector('.progress-value');
+            progressSlider.addEventListener('input', function() {
+                progressValue.textContent = `Progress: ${this.value}%`;
             });
-        
-            const descriptionInput = document.createElement('textarea');
-            descriptionInput.value = task.description;
-            descriptionInput.addEventListener('blur', () => {
-                task.description = descriptionInput.value;
-                taskElement.querySelector('.description p').textContent = task.description;
-            });
-        
-            // Replace task title and description with input fields for editing
-            taskElement.querySelector('.task-title').replaceWith(titleInput);
-            taskElement.querySelector('.description p').replaceWith(descriptionInput);
-        
-            // Focus on the title input field for the user to start editing
-            titleInput.focus();
         }
 
         
