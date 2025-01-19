@@ -517,77 +517,21 @@ async function deleteTask(buttonElement) {
                 `;
         }
 
-// Handle dragging tasks
-let draggedTask = null;
-
-function handleDragStart(event) {
-    draggedTask = event.target;
-    draggedTask.classList.add('dragging');
-}
-
-function handleDragEnd(event) {
-    draggedTask.classList.remove('dragging');
-    draggedTask = null;
-}
-
-// Update task status in Supabase when dragged
-async function handleDrop(event) {
-    event.preventDefault();
-    
-    if (draggedTask) {
-        const column = event.target.closest('.column'); // Ensure the drop happens within a column
-        if (column && column.id !== draggedTask.parentElement.id) {
-            const taskId = draggedTask.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
-            
-            if (task) {
-                const newStatus = column.id;
-                task.status = newStatus;
-
-                try {
-                    const { error } = await supabaseClient 
-                        .from('tasks')
-                        .update({ status: newStatus })
-                        .eq('id', taskId);
-
-                    if (error) throw error;
-                } catch (error) {
-                    console.error('Error updating task status:', error);
-                    // Fallback to localStorage
-                    localStorage.setItem('tasks', JSON.stringify(tasks));
-                }
-
-                column.insertBefore(draggedTask, column.querySelector('.add-button'));
-            }
-        }
-    }
-}
-
-// Enable drag over functionality
-function handleDragOver(event) {
-    event.preventDefault(); // Allow drop
-}
-
-        function downloadCSV() {
-            const header = 'id,title,assignedTo,description,progress,status,createdAt\n';
-            const csvContent = tasks.map(task => 
-                `${task.id},${task.title},${task.assignedTo},${task.description},${task.progress},${task.status},${task.createdAt}`
-            ).join('\n');
-
-            const blob = new Blob([header + csvContent], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.setAttribute('href', url);
-            a.setAttribute('download', 'tasks.csv');
-            a.click();
+        function handleDragStart(event) {
+            draggedTask = this;
+            setTimeout(() => this.classList.add('dragging'), 0);
         }
 
-        // Add event listeners to columns
-        const columns = document.querySelectorAll('.column');
-        columns.forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
-        });
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedTask = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+        }
+
+
 
             // Add this to test the connection when the page loads
 document.addEventListener('DOMContentLoaded', async () => {
