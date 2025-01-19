@@ -284,31 +284,55 @@ async function saveTask(cardElement) {
     }
 }
 
-        
-       async function addTask(columnId) {
+
+async function addTask(columnId) {
     try {
+        // Create the new task object
         const newTask = {
             title: 'New Task',
-            assignedto: 'Click to Add', // Changed from assignedTo
+            assignedto: 'Click to Add',
             description: 'This is a new task description.',
             progress: 0,
             status: columnId,
-            createdat: new Date().toISOString() // Changed from createdAt
+            createdat: new Date().toISOString()
         };
 
+        // Insert the task into Supabase
         const { data, error } = await supabaseClient
             .from('tasks')
             .insert([newTask])
             .select()
             .single();
 
-        if (error) throw error;
+        if (error) {
+            console.error('Supabase error:', error);
+            throw error;
+        }
 
-        console.log('Task added successfully:', data);
+        console.log('Task created successfully:', data);
+
+        // Create the visual element
         createTaskElement(data);
+        
+        // Add to local tasks array
+        tasks.push(data);
     } catch (error) {
         console.error('Error adding task:', error.message);
         alert('Error adding task. Check console for details.');
+    }
+}
+
+// Helper function to initialize Supabase table
+async function initializeTable() {
+    try {
+        const { error } = await supabaseClient
+            .rpc('initialize_tasks_table');
+            
+        if (error) throw error;
+        
+        console.log('Table initialized successfully');
+    } catch (error) {
+        console.error('Error initializing table:', error);
     }
 }
                
