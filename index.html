@@ -270,47 +270,43 @@ async function loadTasks() {
 
 // Update the saveTask function
 async function saveTask(cardElement) {
-    const taskId = cardElement.dataset.taskId;
-    const task = tasks.find(t => t.id == taskId);
+     const taskId = cardElement.dataset.taskId;
+     const task = tasks.find(t => t.id == taskId);
 
-    if (!task) {
-        console.error('Task not found:', taskId);
-        return;
-    }
+     const newTitle = cardElement.querySelector('.edit-title').value;
+     const newPerson = cardElement.querySelector('.edit-person').value;
+     const newDescription = cardElement.querySelector('.edit-description').value;
+     const newProgress = cardElement.querySelector('.edit-progress').value;
 
-    const newTitle = cardElement.querySelector('.edit-title').value;
-    const newPerson = cardElement.querySelector('.edit-person').value;
-    const newDescription = cardElement.querySelector('.edit-description').value;
-    const newProgress = cardElement.querySelector('.edit-progress').value;
+     try {
+         const { error } = await supabaseClient
+             .from('tasks')
+             .update({
+                 title: newTitle,
+                 assignedto: newPerson,
+                 description: newDescription,
+                 progress: newProgress
+             })
+             .eq('id', taskId);
 
-    try {
-        const { error } = await supabaseClient
-            .from('tasks')
-            .update({
-                title: newTitle,
-                assignedto: newPerson,
-                description: newDescription,
-                progress: newProgress
-            })
-            .eq('id', taskId);
+         if (error) throw error;
 
-        if (error) throw error;
+         // Update local task object
+         Object.assign(task, {
+             title: newTitle,
+             assignedto: newPerson,
+             description: newDescription,
+             progress: newProgress
+         });
 
-        // Update local task object
-        Object.assign(task, {
-            title: newTitle,
-            assignedto: newPerson,
-            description: newDescription,
-            progress: newProgress
-        });
+         // Update the card element
+         createTaskElement(task);
+     } catch (error) {
+         console.error('Error saving task:', error);
+         alert('Error saving task: ' + error.message);
+     }
+ }
 
-        // Update the card element
-        createTaskElement(task);
-    } catch (error) {
-        console.error('Error saving task:', error);
-        alert('Error saving task: ' + error.message);
-    }
-}
 
 // Update the addTask function
 async function addTask(columnId) {
@@ -519,20 +515,38 @@ async function deleteTask(buttonElement) {
         }
 
         
-
-        function handleDragStart(event) {
-            draggedTask = this;
-            setTimeout(() => this.classList.add('dragging'), 0);
-        }
-
-        function handleDragEnd() {
-            this.classList.remove('dragging');
-            draggedTask = null;
-        }
-
         function handleDragOver(event) {
-            event.preventDefault();
+            event.preventDefault(); // Allow drop
         }
+        
+        function handleDrop(event) {
+            event.preventDefault(); // Prevent default action (e.g., opening a link for a file)
+            
+            // Get the dragged element and the target column
+            const draggedElement = document.querySelector('.dragging'); // Assuming you set the dragged element's class to "dragging"
+            const targetColumn = event.target.closest('.column'); // Ensure the drop happens within a column
+            
+            if (targetColumn && draggedElement) {
+                // Append the dragged element to the new column
+                targetColumn.appendChild(draggedElement);
+            }
+        }
+        
+        // Add event listeners for each column
+        document.querySelectorAll('.column').forEach(column => {
+            column.addEventListener('dragover', handleDragOver);
+            column.addEventListener('drop', handleDrop);
+        });
+        
+        // Assuming your draggable items are within these columns, add a "dragging" class when an item is being dragged:
+        document.querySelectorAll('.draggable').forEach(item => {
+            item.addEventListener('dragstart', () => {
+                item.classList.add('dragging');
+            });
+            item.addEventListener('dragend', () => {
+                item.classList.remove('dragging');
+            });
+        });
 
 
 
