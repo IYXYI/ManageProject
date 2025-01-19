@@ -322,17 +322,27 @@ async function addTask(columnId) {
     }
 }
 
-// Helper function to initialize Supabase table
 async function initializeTable() {
     try {
-        const { error } = await supabaseClient
+        const { data, error } = await supabaseClient
             .rpc('initialize_tasks_table');
             
-        if (error) throw error;
+        if (error) {
+            console.error('Initialization error details:', {
+                message: error.message,
+                details: error.details,
+                hint: error.hint
+            });
+            throw error;
+        }
         
-        console.log('Table initialized successfully');
+        console.log('Table initialized successfully:', data);
     } catch (error) {
         console.error('Error initializing table:', error);
+        // Add more detailed error information
+        if (error.status === 401) {
+            console.error('Authentication error - check your API key and policies');
+        }
     }
 }
                
