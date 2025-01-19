@@ -188,11 +188,18 @@
 
        
 // Create task element function
+// Create task element function
 function createTaskElement(task) {
     const column = document.getElementById(task.status);
     if (!column) {
         console.error('Column not found:', task.status);
         return;
+    }
+
+    // Remove existing task with same ID if it exists
+    const existingTask = document.querySelector(`[data-task-id="${task.id}"]`);
+    if (existingTask) {
+        existingTask.remove();
     }
 
     const newTask = document.createElement('div');
@@ -219,9 +226,15 @@ function createTaskElement(task) {
     newTask.addEventListener('dragend', handleDragEnd);
     newTask.ondblclick = function() { editTask(newTask); };
     
-    column.insertBefore(newTask, column.querySelector('.add-button'));
+    // Find the add button in the correct column
+    const addButton = column.querySelector('.add-button');
+    if (addButton) {
+        column.insertBefore(newTask, addButton);
+    } else {
+        // If no add button is found, append to the end of the column
+        column.appendChild(newTask);
+    }
 }
-
 // Load tasks function
 async function loadTasks() {
     try {
@@ -253,10 +266,17 @@ async function loadTasks() {
         alert(`Error loading tasks: ${error.message}`);
     }
 }
-// Save task function
+
+
+// Update the saveTask function
 async function saveTask(cardElement) {
     const taskId = cardElement.dataset.taskId;
     const task = tasks.find(t => t.id == taskId);
+
+    if (!task) {
+        console.error('Task not found:', taskId);
+        return;
+    }
 
     const newTitle = cardElement.querySelector('.edit-title').value;
     const newPerson = cardElement.querySelector('.edit-person').value;
@@ -277,20 +297,22 @@ async function saveTask(cardElement) {
         if (error) throw error;
 
         // Update local task object
-        task.title = newTitle;
-        task.assignedto = newPerson;
-        task.description = newDescription;
-        task.progress = newProgress;
+        Object.assign(task, {
+            title: newTitle,
+            assignedto: newPerson,
+            description: newDescription,
+            progress: newProgress
+        });
 
         // Update the card element
-        createTaskElement(task); // Re-create the card with updated data
+        createTaskElement(task);
     } catch (error) {
         console.error('Error saving task:', error);
-        alert('Error saving task. Check console for details.');
+        alert('Error saving task: ' + error.message);
     }
 }
 
-
+// Update the addTask function
 async function addTask(columnId) {
     try {
         // Create the new task object with all required fields
@@ -319,7 +341,11 @@ async function addTask(columnId) {
 
         // Add to local tasks array and create visual element
         if (data && data[0]) {
+            // Remove any existing task with the same ID from the tasks array
+            tasks = tasks.filter(t => t.id !== data[0].id);
+            // Add the new task to the array
             tasks.push(data[0]);
+            // Create the visual element
             createTaskElement(data[0]);
         }
     } catch (error) {
@@ -327,6 +353,7 @@ async function addTask(columnId) {
         alert(`Error adding task: ${error.message}`);
     }
 }
+        
 
 async function initializeTable() {
     try {
