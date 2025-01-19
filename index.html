@@ -257,6 +257,34 @@
             event.preventDefault();
         }
 
+        function editTask(taskElement) {
+            const taskId = taskElement.dataset.taskId;
+            const task = tasks.find(t => t.id == taskId);
+        
+            // Create input fields for editing task title and description
+            const titleInput = document.createElement('input');
+            titleInput.value = task.title;
+            titleInput.addEventListener('blur', () => {
+                task.title = titleInput.value;
+                taskElement.querySelector('.task-title').textContent = task.title;
+            });
+        
+            const descriptionInput = document.createElement('textarea');
+            descriptionInput.value = task.description;
+            descriptionInput.addEventListener('blur', () => {
+                task.description = descriptionInput.value;
+                taskElement.querySelector('.description p').textContent = task.description;
+            });
+        
+            // Replace task title and description with input fields for editing
+            taskElement.querySelector('.task-title').replaceWith(titleInput);
+            taskElement.querySelector('.description p').replaceWith(descriptionInput);
+        
+            // Focus on the title input field for the user to start editing
+            titleInput.focus();
+        }
+
+        
         function handleDrop(event) {
             event.preventDefault();
             if (draggedTask) {
