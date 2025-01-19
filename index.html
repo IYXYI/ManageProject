@@ -281,16 +281,16 @@
 
 
 
+
         function editTask(cardElement) {
-    // Get the current task data
     const taskTitle = cardElement.querySelector('.task-title').textContent;
     const person = cardElement.querySelector('.person').textContent.replace('Assigned to: ', '');
     const description = cardElement.querySelector('.description p').textContent;
     const progress = parseInt(cardElement.querySelector('.progress-fill').style.width) || 0;
 
+    // Store the original content without any string manipulation
     const originalContent = cardElement.innerHTML;
     
-    // Replace the card content with an editable form
     cardElement.innerHTML = `
         <div class="edit-form">
             <input type="text" class="edit-title" value="${taskTitle}" placeholder="Task Title">
@@ -300,7 +300,7 @@
             <div class="progress-value">Progress: ${progress}%</div>
             <div class="buttons-container">
                 <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
-                <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement, '${originalContent.replace(/'/g, "&#39;")}')">Cancel</button>
+                <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement)">Cancel</button>
             </div>
         </div>
     `;
@@ -312,6 +312,29 @@
         progressValue.textContent = `Progress: ${this.value}%`;
     });
 }
+
+// Modified cancelEdit function to use a simpler approach
+function cancelEdit(cardElement) {
+    // Recreate the original card content
+    const taskId = cardElement.dataset.taskId;
+    const task = tasks.find(t => t.id == taskId);
+    
+    cardElement.innerHTML = `
+        <span class="task-title">${task.title}</span>
+        <span class="person">Assigned to: ${task.assignedTo}</span>
+        <div class="description">
+            <p>${task.description}</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+            </div>
+            <div class="progress-value">Progress: ${task.progress}%</div>
+        </div>
+        <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+    `;
+}
+        
 
 // Save the task after editing
 function saveTask(cardElement) {
@@ -346,10 +369,7 @@ function saveTask(cardElement) {
     `;
 }
 
-// Cancel editing and revert to original content
-function cancelEdit(cardElement, originalContent) {
-    cardElement.innerHTML = originalContent;
-}
+
 
         // Load tasks when page loads
         document.addEventListener('DOMContentLoaded', loadTasks);
