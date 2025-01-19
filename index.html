@@ -517,41 +517,56 @@ async function deleteTask(buttonElement) {
                 `;
         }
 
-        
-        function handleDragOver(event) {
-            event.preventDefault(); // Allow drop
-        }
-        
-        function handleDrop(event) {
-            event.preventDefault(); // Prevent default action (e.g., opening a link for a file)
+// Handle dragging tasks
+let draggedTask = null;
+
+function handleDragStart(event) {
+    draggedTask = event.target;
+    draggedTask.classList.add('dragging');
+}
+
+function handleDragEnd(event) {
+    draggedTask.classList.remove('dragging');
+    draggedTask = null;
+}
+
+// Update task status in Supabase when dragged
+async function handleDrop(event) {
+    event.preventDefault();
+    
+    if (draggedTask) {
+        const column = event.target.closest('.column'); // Ensure the drop happens within a column
+        if (column && column.id !== draggedTask.parentElement.id) {
+            const taskId = draggedTask.dataset.taskId;
+            const task = tasks.find(t => t.id == taskId);
             
-            // Get the dragged element and the target column
-            const draggedElement = document.querySelector('.dragging'); // Assuming you set the dragged element's class to "dragging"
-            const targetColumn = event.target.closest('.column'); // Ensure the drop happens within a column
-            
-            if (targetColumn && draggedElement) {
-                // Append the dragged element to the new column
-                targetColumn.appendChild(draggedElement);
+            if (task) {
+                const newStatus = column.id;
+                task.status = newStatus;
+
+                try {
+                    const { error } = await supabaseClient 
+                        .from('tasks')
+                        .update({ status: newStatus })
+                        .eq('id', taskId);
+
+                    if (error) throw error;
+                } catch (error) {
+                    console.error('Error updating task status:', error);
+                    // Fallback to localStorage
+                    localStorage.setItem('tasks', JSON.stringify(tasks));
+                }
+
+                column.insertBefore(draggedTask, column.querySelector('.add-button'));
             }
         }
-        
-        // Add event listeners for each column
-        document.querySelectorAll('.column').forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
-        });
-        
-        // Assuming your draggable items are within these columns, add a "dragging" class when an item is being dragged:
-        document.querySelectorAll('.draggable').forEach(item => {
-            item.addEventListener('dragstart', () => {
-                item.classList.add('dragging');
-            });
-            item.addEventListener('dragend', () => {
-                item.classList.remove('dragging');
-            });
-        });
+    }
+}
 
-
+// Enable drag over functionality
+function handleDragOver(event) {
+    event.preventDefault(); // Allow drop
+}
 
         function downloadCSV() {
             const header = 'id,title,assignedTo,description,progress,status,createdAt\n';
