@@ -182,7 +182,7 @@
         'https://mdqyltfyihcvfqtkencr.supabase.co',
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcXlsdGZ5aWhjdmZxdGtlbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyODM4ODMsImV4cCI6MjA1Mjg1OTg4M30.6zQsOtsFbsOoivv_NK2-36VjY3NE9B3_wTxJGYnc8yE'
     );
-        
+        let draggedTask = null; // Add this at the top with your other variables
         let tasks = [];
         let nextId = 1;
 
@@ -407,22 +407,21 @@ async function deleteTask(buttonElement) {
         
         function editTask(cardElement) {
             const taskId = cardElement.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
-
-            cardElement.innerHTML = `
-                <div class="edit-form">
-                    <input type="text" class="edit-title" value="${task.title}" placeholder="Task Title">
-                    <input type="text" class="edit-person" value="${task.assignedTo}" placeholder="Assigned Person">
-                    <textarea class="edit-description" placeholder="Task Description">${task.description}</textarea>
-                    <input type="range" class="edit-progress" value="${task.progress}" min="0" max="100" step="10">
-                    <div class="progress-value">Progress: ${task.progress}%</div>
-                    <div class="buttons-container">
-                        <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
-                        <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement)">Cancel</button>
+                const task = tasks.find(t => t.id == taskId);
+            
+                cardElement.innerHTML = `
+                    <div class="edit-form">
+                        <input type="text" class="edit-title" value="${task.title}" placeholder="Task Title">
+                        <input type="text" class="edit-person" value="${task.assignedto}" placeholder="Assigned Person">
+                        <textarea class="edit-description" placeholder="Task Description">${task.description}</textarea>
+                        <input type="range" class="edit-progress" value="${task.progress}" min="0" max="100" step="10">
+                        <div class="progress-value">Progress: ${task.progress}%</div>
+                        <div class="buttons-container">
+                            <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
+                            <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement)">Cancel</button>
+                        </div>
                     </div>
-                </div>
-            `;
-
+                `;
             const progressSlider = cardElement.querySelector('.edit-progress');
             const progressValue = cardElement.querySelector('.progress-value');
             progressSlider.addEventListener('input', function() {
@@ -430,51 +429,62 @@ async function deleteTask(buttonElement) {
             });
         }
 
-        function saveTask(cardElement) {
-            const taskId = cardElement.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
+       function saveTask(cardElement) {
+    const taskId = cardElement.dataset.taskId;
+    const task = tasks.find(t => t.id == taskId);
 
-            task.title = cardElement.querySelector('.edit-title').value;
-            task.assignedTo = cardElement.querySelector('.edit-person').value;
-            task.description = cardElement.querySelector('.edit-description').value;
-            task.progress = cardElement.querySelector('.edit-progress').value;
+    const newTitle = cardElement.querySelector('.edit-title').value;
+    const newPerson = cardElement.querySelector('.edit-person').value;
+    const newDescription = cardElement.querySelector('.edit-description').value;
+    const newProgress = cardElement.querySelector('.edit-progress').value;
 
-            cardElement.innerHTML = `
-                <span class="task-title">${task.title}</span>
-                <span class="person">Assigned to: ${task.assignedTo}</span>
-                <div class="description">
-                    <p>${task.description}</p>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${task.progress}%"></div>
-                    </div>
-                    <div class="progress-value">Progress: ${task.progress}%</div>
-                </div>
-                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
-            `;
-            
-            saveTasks();
-        }
+    // Update the task object
+    task.title = newTitle;
+    task.assignedto = newPerson;
+    task.description = newDescription;
+    task.progress = newProgress;
+
+    // Update in Supabase
+    supabaseClient
+        .from('tasks')
+        .update({
+            title: newTitle,
+            assignedto: newPerson,
+            description: newDescription,
+            progress: newProgress
+        })
+        .eq('id', taskId)
+        .then(({ error }) => {
+            if (error) {
+                console.error('Error saving to Supabase:', error);
+                return;
+            }
+            // Update the UI
+            createTaskElement(task);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+}
 
         function cancelEdit(cardElement) {
-            const taskId = cardElement.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
-            
-            cardElement.innerHTML = `
-                <span class="task-title">${task.title}</span>
-                <span class="person">Assigned to: ${task.assignedTo}</span>
-                <div class="description">
-                    <p>${task.description}</p>
-                </div>
-                <div class="progress-container">
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${task.progress}%"></div>
+                const taskId = cardElement.dataset.taskId;
+                const task = tasks.find(t => t.id == taskId);
+                
+                cardElement.innerHTML = `
+                    <span class="task-title">${task.title}</span>
+                    <span class="person">Assigned to: ${task.assignedto}</span>
+                    <div class="description">
+                        <p>${task.description}</p>
                     </div>
-                    <div class="progress-value">Progress: ${task.progress}%</div>
-                </div>
-                <button class="delete-button" onclick="deleteTask(this)">Delete</button>
-            `;
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${task.progress}%"></div>
+                        </div>
+                        <div class="progress-value">Progress: ${task.progress}%</div>
+                    </div>
+                    <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+                `;
         }
 
         
@@ -516,21 +526,29 @@ async function deleteTask(buttonElement) {
             column.addEventListener('drop', handleDrop);
         });
 
-        // Add this to test the connection when the page loads
-        document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Initialize the table
-        await initializeTable();
-        
-        // Then load tasks
-        await loadTasks();
-        
-        console.log('Application initialized successfully');
-    } catch (error) {
-        console.error('Initialization error:', error);
-        alert('Error initializing application. Check console for details.');
-    }
-});
+            // Add this to test the connection when the page loads
+       document.addEventListener('DOMContentLoaded', async () => {
+        console.log('DOMContentLoaded event fired');
+        try {
+            console.log('Starting initialization...');
+            // Initialize the table
+            await initializeTable();
+            console.log('Table initialized');
+            
+            // Then load tasks
+            await loadTasks();
+            console.log('Tasks loaded');
+            
+            console.log('Application initialized successfully');
+        } catch (error) {
+            console.error('Initialization error:', error);
+            // More detailed error logging
+            if (error.response) {
+                console.error('Error response:', error.response);
+            }
+            alert('Error initializing application. Check console for details.');
+        }
+    });
     </script>
 </body>
 </html>
