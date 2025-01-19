@@ -397,35 +397,37 @@ async function deleteTask(buttonElement) {
     }
 }
 
-        // Update task status in Supabase when dragged
-        async function handleDrop(event) {
-            event.preventDefault();
-            if (draggedTask) {
-                const column = this;
-                const taskId = draggedTask.dataset.taskId;
-                const task = tasks.find(t => t.id == taskId);
-                
-                if (task) {
-                    const newStatus = column.id;
-                    task.status = newStatus;
+        // Update the handleDrop function
+async function handleDrop(event) {
+    event.preventDefault();
+    if (draggedTask) {
+        const column = this;
+        const taskId = draggedTask.dataset.taskId;
+        const task = tasks.find(t => t.id == taskId);
 
-                    try {
-                        const { error } = await supabaseClient 
-                            .from('tasks')
-                            .update({ status: newStatus })
-                            .eq('id', taskId);
+        if (task) {
+            const newStatus = column.id;  // new status is the column's id
+            task.status = newStatus;
 
-                        if (error) throw error;
-                    } catch (error) {
-                        console.error('Error updating task status:', error);
-                        // Fallback to localStorage
-                        localStorage.setItem('tasks', JSON.stringify(tasks));
-                    }
+            // Update task status in the database
+            try {
+                const { error } = await supabaseClient
+                    .from('tasks')
+                    .update({ status: newStatus })
+                    .eq('id', taskId);
 
-                    column.insertBefore(draggedTask, column.querySelector('.add-button'));
-                }
+                if (error) throw error;
+
+                // Move task to new column
+                column.insertBefore(draggedTask, column.querySelector('.add-button'));
+            } catch (error) {
+                console.error('Error updating task status:', error);
+                // Fallback: Save tasks in localStorage for recovery
+                localStorage.setItem('tasks', JSON.stringify(tasks));
             }
         }
+    }
+}
 
         //////////////////
 
@@ -521,7 +523,7 @@ async function deleteTask(buttonElement) {
             draggedTask = this;
             setTimeout(() => this.classList.add('dragging'), 0);
         }
-
+        
         function handleDragEnd() {
             this.classList.remove('dragging');
             draggedTask = null;
@@ -531,6 +533,11 @@ async function deleteTask(buttonElement) {
             event.preventDefault();
         }
 
+
+document.querySelectorAll('.column').forEach(column => {
+    column.addEventListener('dragover', handleDragOver);
+    column.addEventListener('drop', handleDrop);
+});
 
 
             // Add this to test the connection when the page loads
