@@ -174,13 +174,15 @@
 
     <script>
 
-    const { createClient } = supabase;   
-    // Initialize Supabase client (place this at the top of your script)
-    const supabase = createClient(
+    // First import createClient
+    const { createClient } = supabase;
+    
+    // Then create the client
+    const supabaseClient = createClient(
         'https://mdqyltfyihcvfqtkencr.supabase.co',
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcXlsdGZ5aWhjdmZxdGtlbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyODM4ODMsImV4cCI6MjA1Mjg1OTg4M30.6zQsOtsFbsOoivv_NK2-36VjY3NE9B3_wTxJGYnc8yE'
     );
-     
+        
         let tasks = [];
         let nextId = 1;
 
@@ -248,36 +250,32 @@ async function loadTasks() {
         }
 
         
-        // Add task function
-        async function addTask(columnId) {
-            try {
-                // First, create the task object
-                const newTask = {
-                    title: 'New Task',
-                    assignedTo: 'Click to Add',
-                    description: 'This is a new task description.',
-                    progress: 0,
-                    status: columnId,
-                    createdAt: new Date().toISOString()
-                };
-        
-                // Insert into Supabase
-                const { data, error } = await supabase
-                    .from('tasks')
-                    .insert([newTask])
-                    .select()
-                    .single();
-        
-                if (error) throw error;
-        
-                // If successful, create the UI element
-                console.log('Task added successfully:', data);
-                createTaskElement(data);
-            } catch (error) {
-                console.error('Error adding task:', error.message);
-                alert('Error adding task. Check console for details.');
-            }
-        }
+       async function addTask(columnId) {
+    try {
+        const newTask = {
+            title: 'New Task',
+            assignedto: 'Click to Add', // Changed from assignedTo
+            description: 'This is a new task description.',
+            progress: 0,
+            status: columnId,
+            createdat: new Date().toISOString() // Changed from createdAt
+        };
+
+        const { data, error } = await supabaseClient
+            .from('tasks')
+            .insert([newTask])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        console.log('Task added successfully:', data);
+        createTaskElement(data);
+    } catch (error) {
+        console.error('Error adding task:', error.message);
+        alert('Error adding task. Check console for details.');
+    }
+}
                
 
 // Delete task function
@@ -286,7 +284,7 @@ async function deleteTask(buttonElement) {
         const task = buttonElement.closest('.card');
         const taskId = task.dataset.taskId;
 
-        const { error } = await supabase
+        const { error } = await supabaseClient 
             .from('tasks')
             .delete()
             .eq('id', taskId);
@@ -313,7 +311,7 @@ async function deleteTask(buttonElement) {
                     task.status = newStatus;
 
                     try {
-                        const { error } = await supabase
+                        const { error } = await supabaseClient 
                             .from('tasks')
                             .update({ status: newStatus })
                             .eq('id', taskId);
@@ -486,7 +484,7 @@ function createTaskElement(task) {
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 // Test the connection
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient 
                     .from('tasks')
                     .select('count')
                     .single();
