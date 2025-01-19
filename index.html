@@ -508,24 +508,19 @@ async function deleteTask(buttonElement) {
 
         // Add this to test the connection when the page loads
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                // Test the connection
-                const { data, error } = await supabaseClient 
-                    .from('tasks')
-                    .select('count')
-                    .single();
+    try {
+        // Initialize the table
+        await initializeTable();
         
-                if (error) throw error;
+        // Then load tasks
+        await loadTasks();
         
-                console.log('Successfully connected to Supabase!');
-                
-                // Load tasks
-                await loadTasks();
-            } catch (error) {
-                console.error('Connection error:', error.message);
-                alert('Error connecting to database. Check console for details.');
-            }
-        });
+        console.log('Application initialized successfully');
+    } catch (error) {
+        console.error('Initialization error:', error);
+        alert('Error initializing application. Check console for details.');
+    }
+});
     </script>
 </body>
 </html>
