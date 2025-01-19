@@ -390,7 +390,7 @@ async function deleteTask(buttonElement) {
     }
 }
 
-        // Update the handleDrop function
+// Update the handleDrop function
 async function handleDrop(event) {
     event.preventDefault();
     if (draggedTask) {
@@ -414,8 +414,11 @@ async function handleDrop(event) {
                 // Move task to new column visually
                 column.insertBefore(draggedTask, column.querySelector('.add-button'));
 
-                // Reload tasks to ensure everything is synced
-                await loadTasks(); // Ensure the page reloads with updated task status
+                // Optionally, update the task list in the local `tasks` array to ensure consistency
+                const updatedTask = { ...task, status: newStatus };
+                const index = tasks.findIndex(t => t.id === taskId);
+                tasks[index] = updatedTask;
+
             } catch (error) {
                 console.error('Error updating task status:', error);
                 // Fallback: Save tasks in localStorage for recovery
@@ -424,6 +427,7 @@ async function handleDrop(event) {
         }
     }
 }
+
 
 
         //////////////////
