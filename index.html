@@ -186,21 +186,58 @@
         let tasks = [];
         let nextId = 1;
 
-        // Load tasks function
+       
+// Create task element function
+function createTaskElement(task) {
+    const column = document.getElementById(task.status);
+    if (!column) {
+        console.error('Column not found:', task.status);
+        return;
+    }
+
+    const newTask = document.createElement('div');
+    newTask.className = 'card';
+    newTask.draggable = true;
+    newTask.dataset.taskId = task.id;
+    
+    newTask.innerHTML = `
+        <span class="task-title">${task.title}</span>
+        <span class="person">Assigned to: ${task.assignedto}</span>
+        <div class="description">
+            <p>${task.description}</p>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-fill" style="width: ${task.progress}%"></div>
+            </div>
+            <div class="progress-value">Progress: ${task.progress}%</div>
+        </div>
+        <button class="delete-button" onclick="deleteTask(this)">Delete</button>
+    `;
+
+    newTask.addEventListener('dragstart', handleDragStart);
+    newTask.addEventListener('dragend', handleDragEnd);
+    newTask.ondblclick = function() { editTask(newTask); };
+    
+    column.insertBefore(newTask, column.querySelector('.add-button'));
+}
+
+// Load tasks function
 async function loadTasks() {
     try {
         // Clear existing tasks
         document.querySelectorAll('.card').forEach(card => card.remove());
 
         // Get tasks from Supabase
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('tasks')
             .select('*')
-            .order('createdAt', { ascending: false });
+            .order('createdat', { ascending: false });
 
         if (error) throw error;
 
         console.log('Loaded tasks:', data);
+        tasks = data; // Update the tasks array with the loaded data
 
         // Create elements for each task
         data.forEach(task => createTaskElement(task));
@@ -210,44 +247,42 @@ async function loadTasks() {
     }
 }
 
-        // Save task to Supabase
-        async function saveTask(cardElement) {
-            const taskId = cardElement.dataset.taskId;
-            const task = tasks.find(t => t.id == taskId);
+// Save task function
+async function saveTask(cardElement) {
+    const taskId = cardElement.dataset.taskId;
+    const task = tasks.find(t => t.id == taskId);
 
-            const newTitle = cardElement.querySelector('.edit-title').value;
-            const newPerson = cardElement.querySelector('.edit-person').value;
-            const newDescription = cardElement.querySelector('.edit-description').value;
-            const newProgress = cardElement.querySelector('.edit-progress').value;
+    const newTitle = cardElement.querySelector('.edit-title').value;
+    const newPerson = cardElement.querySelector('.edit-person').value;
+    const newDescription = cardElement.querySelector('.edit-description').value;
+    const newProgress = cardElement.querySelector('.edit-progress').value;
 
-            // Update local task object
-            task.title = newTitle;
-            task.assignedTo = newPerson;
-            task.description = newDescription;
-            task.progress = newProgress;
+    try {
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update({
+                title: newTitle,
+                assignedto: newPerson,
+                description: newDescription,
+                progress: newProgress
+            })
+            .eq('id', taskId);
 
-            try {
-                const { error } = await supabase
-                    .from('tasks')
-                    .update({
-                        title: newTitle,
-                        assignedTo: newPerson,
-                        description: newDescription,
-                        progress: newProgress
-                    })
-                    .eq('id', taskId);
+        if (error) throw error;
 
-                if (error) throw error;
+        // Update local task object
+        task.title = newTitle;
+        task.assignedto = newPerson;
+        task.description = newDescription;
+        task.progress = newProgress;
 
-                // Update the card element
-                updateCardElement(cardElement, task);
-            } catch (error) {
-                console.error('Error saving task:', error);
-                // Fallback to localStorage
-                localStorage.setItem('tasks', JSON.stringify(tasks));
-                updateCardElement(cardElement, task);
-            }
-        }
+        // Update the card element
+        createTaskElement(task); // Re-create the card with updated data
+    } catch (error) {
+        console.error('Error saving task:', error);
+        alert('Error saving task. Check console for details.');
+    }
+}
 
         
        async function addTask(columnId) {
@@ -333,40 +368,7 @@ async function deleteTask(buttonElement) {
 
 
 
-        // Create task element function (modified to work with Supabase data)
-function createTaskElement(task) {
-    const column = document.getElementById(task.status);
-    if (!column) {
-        console.error('Column not found:', task.status);
-        return;
-    }
-
-    const newTask = document.createElement('div');
-    newTask.className = 'card';
-    newTask.draggable = true;
-    newTask.dataset.taskId = task.id;
-    
-    newTask.innerHTML = `
-        <span class="task-title">${task.title}</span>
-        <span class="person">Assigned to: ${task.assignedTo}</span>
-        <div class="description">
-            <p>${task.description}</p>
-        </div>
-        <div class="progress-container">
-            <div class="progress-bar">
-                <div class="progress-fill" style="width: ${task.progress}%"></div>
-            </div>
-            <div class="progress-value">Progress: ${task.progress}%</div>
-        </div>
-        <button class="delete-button" onclick="deleteTask(this)">Delete</button>
-    `;
-
-    newTask.addEventListener('dragstart', handleDragStart);
-    newTask.addEventListener('dragend', handleDragEnd);
-    newTask.ondblclick = function() { editTask(newTask); };
-    
-    column.insertBefore(newTask, column.querySelector('.add-button'));
-}
+ 
         
         
         function editTask(cardElement) {
