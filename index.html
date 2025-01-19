@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Task Management Tool</title>
+    <!-- Add Supabase JS library -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -171,25 +173,169 @@
     <button class="sync-button" onclick="downloadCSV()">Download CSV</button>
 
     <script>
-        // Initialize tasks array and nextId from localStorage or default values
-        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        let nextId = parseInt(localStorage.getItem('nextId')) || 1;
-        let draggedTask = null;
 
-        // Save tasks to localStorage
-        function saveTasks() {
-            localStorage.setItem('tasks', JSON.stringify(tasks));
-            localStorage.setItem('nextId', nextId.toString());
+        // Initialize Supabase client
+        const supabaseUrl = 'https://mdqyltfyihcvfqtkencr.supabase.co'
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1kcXlsdGZ5aWhjdmZxdGtlbmNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzcyODM4ODMsImV4cCI6MjA1Mjg1OTg4M30.6zQsOtsFbsOoivv_NK2-36VjY3NE9B3_wTxJGYnc8yE'
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey)
+
+        let tasks = [];
+        let nextId = 1;
+
+        // Load tasks from Supabase
+        async function loadTasks() {
+            try {
+                const { data, error } = await supabase
+                    .from('tasks')
+                    .select('*')
+                    .order('id');
+
+                if (error) throw error;
+
+                tasks = data;
+                nextId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+
+                // Clear existing tasks
+                document.querySelectorAll('.card').forEach(card => card.remove());
+                
+                // Create task elements
+                tasks.forEach(task => createTaskElement(task));
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                // Fallback to localStorage if Supabase fails
+                const localTasks = JSON.parse(localStorage.getItem('tasks')) || [];
+                tasks = localTasks;
+                loadTasksFromLocal();
+            }
         }
 
-        // Load tasks from localStorage
-        function loadTasks() {
-            // Clear existing tasks
-            document.querySelectorAll('.card').forEach(card => card.remove());
-            
-            // Create task elements
-            tasks.forEach(task => createTaskElement(task));
+        // Save task to Supabase
+        async function saveTask(cardElement) {
+            const taskId = cardElement.dataset.taskId;
+            const task = tasks.find(t => t.id == taskId);
+
+            const newTitle = cardElement.querySelector('.edit-title').value;
+            const newPerson = cardElement.querySelector('.edit-person').value;
+            const newDescription = cardElement.querySelector('.edit-description').value;
+            const newProgress = cardElement.querySelector('.edit-progress').value;
+
+            // Update local task object
+            task.title = newTitle;
+            task.assignedTo = newPerson;
+            task.description = newDescription;
+            task.progress = newProgress;
+
+            try {
+                const { error } = await supabase
+                    .from('tasks')
+                    .update({
+                        title: newTitle,
+                        assignedTo: newPerson,
+                        description: newDescription,
+                        progress: newProgress
+                    })
+                    .eq('id', taskId);
+
+                if (error) throw error;
+
+                // Update the card element
+                updateCardElement(cardElement, task);
+            } catch (error) {
+                console.error('Error saving task:', error);
+                // Fallback to localStorage
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                updateCardElement(cardElement, task);
+            }
         }
+
+        // Add new task to Supabase
+        async function addTask(columnId) {
+            const task = {
+                id: nextId++,
+                title: 'New Task',
+                assignedTo: 'Click to Add',
+                description: 'This is a new task description.',
+                progress: 0,
+                status: columnId,
+                createdAt: new Date().toISOString()
+            };
+
+            try {
+                const { error } = await supabase
+                    .from('tasks')
+                    .insert([task]);
+
+                if (error) throw error;
+
+                tasks.push(task);
+                createTaskElement(task);
+            } catch (error) {
+                console.error('Error adding task:', error);
+                // Fallback to localStorage
+                tasks.push(task);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                createTaskElement(task);
+            }
+        }
+
+        // Delete task from Supabase
+        async function deleteTask(buttonElement) {
+            const task = buttonElement.closest('.card');
+            const taskId = task.dataset.taskId;
+
+            try {
+                const { error } = await supabase
+                    .from('tasks')
+                    .delete()
+                    .eq('id', taskId);
+
+                if (error) throw error;
+
+                tasks = tasks.filter(t => t.id != taskId);
+                task.remove();
+            } catch (error) {
+                console.error('Error deleting task:', error);
+                // Fallback to localStorage
+                tasks = tasks.filter(t => t.id != taskId);
+                localStorage.setItem('tasks', JSON.stringify(tasks));
+                task.remove();
+            }
+        }
+
+        // Update task status in Supabase when dragged
+        async function handleDrop(event) {
+            event.preventDefault();
+            if (draggedTask) {
+                const column = this;
+                const taskId = draggedTask.dataset.taskId;
+                const task = tasks.find(t => t.id == taskId);
+                
+                if (task) {
+                    const newStatus = column.id;
+                    task.status = newStatus;
+
+                    try {
+                        const { error } = await supabase
+                            .from('tasks')
+                            .update({ status: newStatus })
+                            .eq('id', taskId);
+
+                        if (error) throw error;
+                    } catch (error) {
+                        console.error('Error updating task status:', error);
+                        // Fallback to localStorage
+                        localStorage.setItem('tasks', JSON.stringify(tasks));
+                    }
+
+                    column.insertBefore(draggedTask, column.querySelector('.add-button'));
+                }
+            }
+        }
+
+        //////////////////
+
+
+
 
         function createTaskElement(task) {
             const column = document.getElementById(task.status);
@@ -220,22 +366,7 @@
             column.insertBefore(newTask, column.querySelector('.add-button'));
         }
 
-        function addTask(columnId) {
-            const task = {
-                id: nextId++,
-                title: 'New Task',
-                assignedTo: 'Click to Add',
-                description: 'This is a new task description.',
-                progress: 0,
-                status: columnId,
-                createdAt: new Date().toISOString().split('T')[0]
-            };
-            
-            tasks.push(task);
-            createTaskElement(task);
-            saveTasks();
-        }
-
+        
         function editTask(cardElement) {
             const taskId = cardElement.dataset.taskId;
             const task = tasks.find(t => t.id == taskId);
@@ -308,14 +439,7 @@
             `;
         }
 
-        function deleteTask(buttonElement) {
-            const task = buttonElement.closest('.card');
-            const taskId = task.dataset.taskId;
-            
-            tasks = tasks.filter(t => t.id != taskId);
-            task.remove();
-            saveTasks();
-        }
+        
 
         function handleDragStart(event) {
             draggedTask = this;
@@ -331,19 +455,7 @@
             event.preventDefault();
         }
 
-        function handleDrop(event) {
-            event.preventDefault();
-            if (draggedTask) {
-                const column = this;
-                const taskId = draggedTask.dataset.taskId;
-                const task = tasks.find(t => t.id == taskId);
-                if (task) {
-                    task.status = column.id;
-                    saveTasks();
-                }
-                column.insertBefore(draggedTask, column.querySelector('.add-button'));
-            }
-        }
+
 
         function downloadCSV() {
             const header = 'id,title,assignedTo,description,progress,status,createdAt\n';
