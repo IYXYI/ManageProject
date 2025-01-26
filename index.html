@@ -442,7 +442,6 @@ async function addTask(columnId) {
         alert(`Error adding task: ${error.message}`);
     }
 }
-
         
 
 async function initializeTable() {
@@ -566,43 +565,49 @@ async function handleDrop(event) {
             });
         }
 
-       function saveTask(cardElement) {
-    const taskId = cardElement.dataset.taskId;
-    const task = tasks.find(t => t.id == taskId);
-
-    const newTitle = cardElement.querySelector('.edit-title').value;
-    const newPerson = cardElement.querySelector('.edit-person').value;
-    const newDescription = cardElement.querySelector('.edit-description').value;
-    const newProgress = cardElement.querySelector('.edit-progress').value;
-
-    // Update the task object
-    task.title = newTitle;
-    task.assignedto = newPerson;
-    task.description = newDescription;
-    task.progress = newProgress;
-
-    // Update in Supabase
-    supabaseClient
-        .from('tasks')
-        .update({
-            title: newTitle,
-            assignedto: newPerson,
-            description: newDescription,
-            progress: newProgress
-        })
-        .eq('id', taskId)
-        .then(({ error }) => {
-            if (error) {
-                console.error('Error saving to Supabase:', error);
-                return;
+       async function saveTask(cardElement) {
+                const taskId = cardElement.dataset.taskId;
+                const task = tasks.find(t => t.id == taskId);
+            
+                const newTitle = cardElement.querySelector('.edit-title').value;
+                const newPerson = cardElement.querySelector('.edit-person').value;
+                const newDescription = cardElement.querySelector('.edit-description').value;
+                const newProgress = cardElement.querySelector('.edit-progress').value;
+                const newStartDate = cardElement.querySelector('.edit-startdate').value;
+                const newEndDate = cardElement.querySelector('.edit-enddate').value;
+            
+                try {
+                    const { error } = await supabaseClient
+                        .from('tasks')
+                        .update({
+                            title: newTitle,
+                            assignedto: newPerson,
+                            description: newDescription,
+                            progress: newProgress,
+                            startdate: newStartDate,
+                            enddate: newEndDate
+                        })
+                        .eq('id', taskId);
+            
+                    if (error) throw error;
+            
+                    // Update local task object
+                    Object.assign(task, {
+                        title: newTitle,
+                        assignedto: newPerson,
+                        description: newDescription,
+                        progress: newProgress,
+                        startdate: newStartDate,
+                        enddate: newEndDate
+                    });
+            
+                    // Update the card element
+                    createTaskElement(task);
+                } catch (error) {
+                    console.error('Error saving task:', error);
+                    alert('Error saving task: ' + error.message);
+                }
             }
-            // Update the UI
-            createTaskElement(task);
-        })
-        .catch(error => {
-            console.error('Error:', error);
-        });
-}
 
         function cancelEdit(cardElement) {
                 const taskId = cardElement.dataset.taskId;
