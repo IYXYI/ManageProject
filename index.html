@@ -191,6 +191,26 @@
             gap: 0.5rem;
             margin-top: 1rem;
         }
+        .date-inputs {
+            display: flex;
+            gap: 1rem;
+            margin: 0.5rem 0;
+        }
+        .date-inputs > div {
+            flex: 1;
+        }
+        .date-inputs label {
+            display: block;
+            margin-bottom: 0.3rem;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        .date-inputs input {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
     </style>
 </head>
     
@@ -256,6 +276,14 @@
                 alert('Incorrect username or code.');
             }
         }
+
+        function formatDateTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 16); // Format for datetime-local input
+}
+
+        
 // Create task element function
 function createTaskElement(task) {
     const column = document.getElementById(task.status);
@@ -338,58 +366,66 @@ async function loadTasks() {
 
 // Update the saveTask function
 async function saveTask(cardElement) {
-     const taskId = cardElement.dataset.taskId;
-     const task = tasks.find(t => t.id == taskId);
+    const taskId = cardElement.dataset.taskId;
+    const task = tasks.find(t => t.id == taskId);
 
-     const newTitle = cardElement.querySelector('.edit-title').value;
-     const newPerson = cardElement.querySelector('.edit-person').value;
-     const newDescription = cardElement.querySelector('.edit-description').value;
-     const newProgress = cardElement.querySelector('.edit-progress').value;
+    const newTitle = cardElement.querySelector('.edit-title').value;
+    const newPerson = cardElement.querySelector('.edit-person').value;
+    const newDescription = cardElement.querySelector('.edit-description').value;
+    const newProgress = cardElement.querySelector('.edit-progress').value;
+    const newStartDate = cardElement.querySelector('.edit-startdate').value;
+    const newEndDate = cardElement.querySelector('.edit-enddate').value;
 
-     try {
-         const { error } = await supabaseClient
-             .from('tasks')
-             .update({
-                 title: newTitle,
-                 assignedto: newPerson,
-                 description: newDescription,
-                 progress: newProgress
-             })
-             .eq('id', taskId);
+    try {
+        const { error } = await supabaseClient
+            .from('tasks')
+            .update({
+                title: newTitle,
+                assignedto: newPerson,
+                description: newDescription,
+                progress: newProgress,
+                startdate: newStartDate,
+                enddate: newEndDate
+            })
+            .eq('id', taskId);
 
-         if (error) throw error;
+        if (error) throw error;
 
-         // Update local task object
-         Object.assign(task, {
-             title: newTitle,
-             assignedto: newPerson,
-             description: newDescription,
-             progress: newProgress
-         });
+        // Update local task object
+        Object.assign(task, {
+            title: newTitle,
+            assignedto: newPerson,
+            description: newDescription,
+            progress: newProgress,
+            startdate: newStartDate,
+            enddate: newEndDate
+        });
 
-         // Update the card element
-         createTaskElement(task);
-     } catch (error) {
-         console.error('Error saving task:', error);
-         alert('Error saving task: ' + error.message);
-     }
- }
+        // Update the card element
+        createTaskElement(task);
+    } catch (error) {
+        console.error('Error saving task:', error);
+        alert('Error saving task: ' + error.message);
+    }
+}
+
 
 
 // Update the addTask function
 async function addTask(columnId) {
     try {
-        // Create the new task object with all required fields
+        const now = new Date().toISOString();
         const newTask = {
             title: 'New Task',
             assignedto: 'Click to Add',
             description: 'This is a new task description.',
             progress: 0,
             status: columnId,
-            createdat: new Date().toISOString()
+            startdate: now,
+            enddate: null,
+            createdat: now
         };
 
-        // Insert the task into Supabase
         const { data, error } = await supabaseClient
             .from('tasks')
             .insert([newTask])
@@ -397,9 +433,8 @@ async function addTask(columnId) {
 
         if (error) throw error;
 
-        // Add task to the local array and create visual element
         if (data && data[0]) {
-            tasks.push(data[0]);  // Adding to local tasks array
+            tasks.push(data[0]);
             createTaskElement(data[0]);
         }
     } catch (error) {
@@ -502,17 +537,27 @@ async function handleDrop(event) {
                 const task = tasks.find(t => t.id == taskId);
             
                 cardElement.innerHTML = `
-                    <div class="edit-form">
-                        <input type="text" class="edit-title" value="${task.title}" placeholder="Task Title">
-                        <input type="text" class="edit-person" value="${task.assignedto}" placeholder="Assigned Person">
-                        <textarea class="edit-description" placeholder="Task Description">${task.description}</textarea>
-                        <input type="range" class="edit-progress" value="${task.progress}" min="0" max="100" step="10">
-                        <div class="progress-value">Progress: ${task.progress}%</div>
-                        <div class="buttons-container">
-                            <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
-                            <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement)">Cancel</button>
+                <div class="edit-form">
+                    <input type="text" class="edit-title" value="${task.title}" placeholder="Task Title">
+                    <input type="text" class="edit-person" value="${task.assignedto}" placeholder="Assigned Person">
+                    <textarea class="edit-description" placeholder="Task Description">${task.description}</textarea>
+                    <div class="date-inputs">
+                        <div>
+                            <label>Start Date:</label>
+                            <input type="datetime-local" class="edit-startdate" value="${formatDateTime(task.startdate)}">
+                        </div>
+                        <div>
+                            <label>End Date:</label>
+                            <input type="datetime-local" class="edit-enddate" value="${formatDateTime(task.enddate)}">
                         </div>
                     </div>
+                    <input type="range" class="edit-progress" value="${task.progress}" min="0" max="100" step="10">
+                    <div class="progress-value">Progress: ${task.progress}%</div>
+                    <div class="buttons-container">
+                        <button class="add-button" onclick="saveTask(this.parentElement.parentElement.parentElement)">Save</button>
+                        <button class="delete-button" onclick="cancelEdit(this.parentElement.parentElement.parentElement)">Cancel</button>
+                    </div>
+                </div>
                 `;
             const progressSlider = cardElement.querySelector('.edit-progress');
             const progressValue = cardElement.querySelector('.progress-value');
