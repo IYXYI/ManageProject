@@ -411,6 +411,8 @@ async function saveTask(cardElement) {
 
 
 
+ 
+
 // Update the addTask function
 async function addTask(columnId) {
     try {
@@ -421,25 +423,21 @@ async function addTask(columnId) {
             description: 'This is a new task description.',
             progress: 0,
             status: columnId,
-            startdate: now,
-            enddate: null,
-            createdat: now
+            startdate: null, // Set to null initially
+            enddate: null // Set to null initially
         };
 
         const { data, error } = await supabaseClient
             .from('tasks')
-            .insert([newTask])
-            .select();
+            .insert([newTask]);
 
         if (error) throw error;
 
-        if (data && data[0]) {
-            tasks.push(data[0]);
-            createTaskElement(data[0]);
-        }
+        tasks.push(data[0]);
+        createTaskElement(data[0]);
     } catch (error) {
         console.error('Error adding task:', error);
-        alert(`Error adding task: ${error.message}`);
+        alert('Error adding task: ' + error.message);
     }
 }
         
