@@ -631,18 +631,25 @@ async function addTask(columnId) {
             description: 'This is a new task description.',
             progress: 0,
             status: columnId,
-            startdate: null, // Set to null initially
-            enddate: null // Set to null initially
+            startdate: null,
+            enddate: null,
+            createdat: now  // Add creation timestamp
         };
 
         const { data, error } = await supabaseClient
             .from('tasks')
-            .insert([newTask]);
+            .insert([newTask])
+            .select(); // Add .select() to return the inserted row
 
         if (error) throw error;
+        
+        if (!data || data.length === 0) {
+            throw new Error('No data returned from insert operation');
+        }
 
-        tasks.push(data[0]);
-        createTaskElement(data[0]);
+        const insertedTask = data[0];
+        tasks.push(insertedTask);
+        createTaskElement(insertedTask);
     } catch (error) {
         console.error('Error adding task:', error);
         alert('Error adding task: ' + error.message);
